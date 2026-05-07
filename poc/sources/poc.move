@@ -1,4 +1,4 @@
-module poc::poc {
+module itc_poc_v3::poc {
     use sui::tx_context::TxContext;
     use sui::object::{UID, ID};
     use sui::transfer;
