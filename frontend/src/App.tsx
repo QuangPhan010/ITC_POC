@@ -31,6 +31,7 @@ import { CreateTaskForm } from "./components/CreateTaskForm";
 import { SubmissionList } from "./components/SubmissionList";
 import { SubmitTaskModal } from "./components/SubmitTaskModal";
 import { PurchaseVerifier } from "./components/PurchaseVerifier";
+import { VerifierManagement } from "./components/VerifierManagement";
 
 export default function App() {
   const account = useCurrentAccount();
@@ -732,6 +733,8 @@ export default function App() {
                 </button>
               </div>
             </div>
+            <hr className="border-white/5 my-12" />
+            <VerifierManagement />
           </div>
         ) : activeTab === "verifier" ? (
           <div className="space-y-8 animate-in fade-in duration-500">

@@ -14,6 +14,18 @@ module poc::poc {
     const ETaskNotActive: u64 = 2;
     const ESubmissionAlreadyApproved: u64 = 3;
     const EInsufficientFunds: u64 = 4;
+
+    public struct VerifierPurchased has copy, drop {
+        cap_id: ID,
+        org_name: String,
+        owner: address,
+        expires_at: u64
+    }
+
+    public struct VerifierRenewed has copy, drop {
+        cap_id: ID,
+        new_expires_at: u64
+    }
     const EVerifierExpired: u64 = 5;
     const VERIFIER_PRICE: u64 = 50000000; // 0.05 SUI for testing
     const SUBSCRIPTION_DURATION: u64 = 2592000000; // 30 days in ms
@@ -145,7 +157,6 @@ module poc::poc {
 
     // === Admin Functions ===
 
-    /// Admin issues a VerifierCap to an organization
     public fun issue_verifier_cap(
         _: &AdminCap,
         org_name: String,
@@ -157,6 +168,16 @@ module poc::poc {
             org_name,
             expires_at: 1000000000000000 // Decades from now
         }, recipient);
+    }
+
+    /// Admin can revoke a VerifierCap (if they have the object, e.g. via PTB)
+    /// Note: In a real app, you might use a registry or shared object for easier revoking.
+    public fun revoke_verifier_cap(
+        _: &AdminCap,
+        cap: VerifierCap
+    ) {
+        let VerifierCap { id, org_name: _, expires_at: _ } = cap;
+        object::delete(id);
     }
 
     /// Admin creates a new public task (as the protocol itself)
@@ -332,9 +353,18 @@ module poc::poc {
         
         let recipient = tx_context::sender(ctx);
         let expires_at = sui::clock::timestamp_ms(clock) + SUBSCRIPTION_DURATION;
-        
+        let id = object::new(ctx);
+        let cap_id = object::uid_to_inner(&id);
+
+        event::emit(VerifierPurchased {
+            cap_id,
+            org_name,
+            owner: recipient,
+            expires_at
+        });
+
         transfer::transfer(VerifierCap {
-            id: object::new(ctx),
+            id,
             org_name,
             expires_at
         }, recipient);
@@ -356,6 +386,11 @@ module poc::poc {
         } else {
             cap.expires_at = cap.expires_at + SUBSCRIPTION_DURATION;
         };
+
+        event::emit(VerifierRenewed {
+            cap_id: object::uid_to_inner(&cap.id),
+            new_expires_at: cap.expires_at
+        });
     }
 
     /// Verifier adds a verified contribution to a student's profile
