@@ -26,11 +26,11 @@ import { ProfileCard } from "./components/ProfileCard";
 import { ContributionList } from "./components/ContributionList";
 import { CreateProfileModal } from "./components/CreateProfileModal";
 import { VerifyContributionForm } from "./components/VerifyContributionForm";
-import { AdminPanel } from "./components/AdminPanel";
 import { TaskBoard } from "./components/TaskBoard";
 import { CreateTaskForm } from "./components/CreateTaskForm";
 import { SubmissionList } from "./components/SubmissionList";
 import { SubmitTaskModal } from "./components/SubmitTaskModal";
+import { PurchaseVerifier } from "./components/PurchaseVerifier";
 
 export default function App() {
   const account = useCurrentAccount();
@@ -195,7 +195,23 @@ export default function App() {
       });
   }, [submissionObjects, tasks]);
 
-  const hasVerifierCap = useMemo(() => (verifierCaps?.data?.length || 0) > 0, [verifierCaps]);
+  const verifierInfo = useMemo(() => {
+    const obj = verifierCaps?.data?.[0]?.data;
+    if (!obj || !obj.content || obj.content.dataType !== "moveObject") return null;
+    const fields = obj.content.fields as any;
+    return {
+      id: obj.objectId,
+      orgName: fields.org_name,
+      expiresAt: Number(fields.expires_at)
+    };
+  }, [verifierCaps]);
+
+  const hasVerifierCap = !!verifierInfo;
+  const isVerifierExpired = useMemo(() => {
+    if (!verifierInfo) return false;
+    return Date.now() > verifierInfo.expiresAt;
+  }, [verifierInfo]);
+
   const isAdminAddress = useMemo(() => account?.address === ADMIN_ADDRESS, [account]);
   const adminCapId = useMemo(() => {
     return adminCaps?.data?.[0]?.data?.objectId || (isAdminAddress ? ADMIN_CAP_ID : undefined);
@@ -259,6 +275,7 @@ export default function App() {
           tx.pure.string(data.description),
           tx.pure.string(data.category),
           tx.pure.u64(data.points.toString()),
+          tx.object(CLOCK_ID),
         ],
       });
     }
@@ -437,6 +454,7 @@ export default function App() {
           tx.object(verifierCapId),
           tx.object(submissionId),
           tx.pure.string(reason),
+          tx.object(CLOCK_ID),
         ],
       });
     }
@@ -489,30 +507,56 @@ export default function App() {
     );
   };
 
-  const handleIssueVerifier = async (data: { orgName: string; recipient: string }) => {
-    if (!adminCapId) {
-      alert("Admin capability required.");
-      return;
-    }
-
+  const handlePurchaseVerifier = async (orgName: string) => {
     const tx = new Transaction();
+    
+    // Use the gas coin directly for payment
     tx.moveCall({
-      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::issue_verifier_cap`,
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::purchase_verifier_cap`,
       arguments: [
-        tx.object(adminCapId),
-        tx.pure.string(data.orgName),
-        tx.pure.address(data.recipient),
+        tx.gas,
+        tx.pure.string(orgName),
+        tx.object(CLOCK_ID),
       ],
     });
 
     try {
       await signAndExecuteAsync({ transaction: tx });
-      alert("Verifier Cap issued successfully!");
+      alert("Successfully purchased Verifier Package!");
+      setTimeout(() => refetchVerifierCaps(), 2000);
     } catch (error: any) {
       console.error(error);
-      alert(`Failed to issue verifier cap: ${error.message}`);
+      alert(`Purchase failed: ${error.message}`);
       throw error;
     }
+  };
+
+  const handleRenewVerifier = async () => {
+    if (!verifierInfo) return;
+
+    const tx = new Transaction();
+    // Use the gas coin directly for renewal
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::renew_verifier_cap`,
+      arguments: [
+        tx.object(verifierInfo.id),
+        tx.gas,
+        tx.object(CLOCK_ID),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Successfully renewed Verifier Subscription!");
+      setTimeout(() => refetchVerifierCaps(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Renewal failed: ${error.message}`);
+    }
+  };
+
+  const handleIssueVerifier = async (data: { orgName: string; recipient: string }) => {
+    alert("Manual issuance is deprecated. Use the automated purchase system.");
   };
 
   return (
@@ -551,16 +595,14 @@ export default function App() {
               >
                 Quests
               </button>
-              {hasVerifierCap && (
-                <button
-                  onClick={() => setActiveTab("verifier")}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    activeTab === "verifier" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
-                  }`}
-                >
-                  Verifier
-                </button>
-              )}
+              <button
+                onClick={() => setActiveTab("verifier")}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "verifier" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                Organization
+              </button>
               {hasAdminCap && (
                 <button
                   onClick={() => setActiveTab("admin")}
@@ -654,10 +696,7 @@ export default function App() {
               onDelete={handleDeleteTask}
             />
 
-            <div className="grid lg:grid-cols-2 gap-8">
-              <CreateTaskForm onSubmit={handleCreateTask} />
-              <AdminPanel onSubmit={handleIssueVerifier} />
-            </div>
+            <CreateTaskForm onSubmit={handleCreateTask} />
 
             <SubmissionList 
               submissions={submissions} 
@@ -696,13 +735,59 @@ export default function App() {
           </div>
         ) : activeTab === "verifier" ? (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <CreateTaskForm onSubmit={handleCreateTask} />
-            
-            <SubmissionList 
-              submissions={submissions} 
-              onApprove={handleApproveSubmission}
-              onReject={handleRejectSubmission}
-            />
+            {hasVerifierCap ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
+                      <ShieldCheck className={isVerifierExpired ? "text-red-500" : "text-primary"} />
+                      {isVerifierExpired ? "Expired Verifier" : "Verifier Dashboard"}
+                    </h2>
+                    <p className="text-white/40 text-xs mt-1 uppercase tracking-widest font-bold">
+                      {isVerifierExpired ? "Subscription Expired" : "Manage your organization quests"}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <p className="text-[10px] text-white/20 uppercase tracking-widest font-bold mb-1">Subscription Expiry</p>
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold border ${
+                      isVerifierExpired ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-primary/20 bg-primary/10 text-primary"
+                    }`}>
+                      {new Date(verifierInfo.expiresAt).toLocaleDateString()} at {new Date(verifierInfo.expiresAt).toLocaleTimeString()}
+                    </div>
+                    <button 
+                      onClick={handleRenewVerifier}
+                      className="mt-2 text-[10px] text-primary hover:text-white transition-colors font-bold uppercase tracking-widest underline decoration-primary/30 underline-offset-4"
+                    >
+                      Renew Now
+                    </button>
+                  </div>
+                </div>
+                
+                {!isVerifierExpired ? (
+                  <>
+                    <CreateTaskForm onSubmit={handleCreateTask} />
+                    <SubmissionList 
+                      submissions={submissions} 
+                      onApprove={handleApproveSubmission}
+                      onReject={handleRejectSubmission}
+                    />
+                  </>
+                ) : (
+                  <div className="glass-card text-center py-12">
+                    <ShieldCheck size={48} className="text-red-500/20 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-white mb-2">Subscription Expired</h3>
+                    <p className="text-white/40 max-w-xs mx-auto mb-8">
+                      Your verifier capabilities have been suspended. Please renew your subscription to continue managing quests.
+                    </p>
+                    <button onClick={handleRenewVerifier} className="btn-primary px-8">
+                      Renew Subscription (5 SUI)
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <PurchaseVerifier onPurchase={handlePurchaseVerifier} priceSui={0.05} />
+            )}
           </div>
         ) : activeTab === "tasks" ? (
           <div className="animate-in fade-in duration-500">

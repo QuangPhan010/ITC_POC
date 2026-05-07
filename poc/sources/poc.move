@@ -1,16 +1,22 @@
 module poc::poc {
-    use sui::tx_context::{Self, TxContext};
-    use sui::object::{Self, UID, ID};
+    use sui::tx_context::TxContext;
+    use sui::object::{UID, ID};
     use sui::transfer;
     use sui::event;
     use std::string::{String, utf8};
     use std::vector;
     use sui::clock::{Clock};
+    use sui::coin::{Self, Coin};
+    use sui::sui::SUI;
 
     // === Errors ===
     const ENotAuthorized: u64 = 0;
     const ETaskNotActive: u64 = 2;
     const ESubmissionAlreadyApproved: u64 = 3;
+    const EInsufficientFunds: u64 = 4;
+    const EVerifierExpired: u64 = 5;
+    const VERIFIER_PRICE: u64 = 50000000; // 0.05 SUI for testing
+    const SUBSCRIPTION_DURATION: u64 = 2592000000; // 30 days in ms
     const ADMIN_ADDRESS: address = @0xeec802d4e8e8d86a0258702d31d1932ef17226164dee712d397c5ef41aad0dfe;
 
     // === Structs ===
@@ -23,7 +29,8 @@ module poc::poc {
     /// Capability given to organizations to verify student contributions
     public struct VerifierCap has key, store {
         id: UID,
-        org_name: String
+        org_name: String,
+        expires_at: u64
     }
 
     /// The student's proof of contribution profile (Soulbound)
@@ -147,7 +154,8 @@ module poc::poc {
     ) {
         transfer::transfer(VerifierCap {
             id: object::new(ctx),
-            org_name
+            org_name,
+            expires_at: 1000000000000000 // Decades from now
         }, recipient);
     }
 
@@ -307,6 +315,49 @@ module poc::poc {
 
     // === Verifier Functions ===
 
+    /// Helper to check if a verifier cap is still valid
+    fun check_verifier_expiry(cap: &VerifierCap, clock: &Clock) {
+        assert!(sui::clock::timestamp_ms(clock) < cap.expires_at, EVerifierExpired);
+    }
+
+    /// Purchase a VerifierCap by paying 5 SUI for 30 days
+    public fun purchase_verifier_cap(
+        payment: &mut Coin<SUI>,
+        org_name: String,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let paid = coin::split(payment, VERIFIER_PRICE, ctx);
+        transfer::public_transfer(paid, ADMIN_ADDRESS);
+        
+        let recipient = tx_context::sender(ctx);
+        let expires_at = sui::clock::timestamp_ms(clock) + SUBSCRIPTION_DURATION;
+        
+        transfer::transfer(VerifierCap {
+            id: object::new(ctx),
+            org_name,
+            expires_at
+        }, recipient);
+    }
+
+    /// Renew an existing VerifierCap for another 30 days
+    public fun renew_verifier_cap(
+        cap: &mut VerifierCap,
+        payment: &mut Coin<SUI>,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let paid = coin::split(payment, VERIFIER_PRICE, ctx);
+        transfer::public_transfer(paid, ADMIN_ADDRESS);
+        
+        let now = sui::clock::timestamp_ms(clock);
+        if (now > cap.expires_at) {
+            cap.expires_at = now + SUBSCRIPTION_DURATION;
+        } else {
+            cap.expires_at = cap.expires_at + SUBSCRIPTION_DURATION;
+        };
+    }
+
     /// Verifier adds a verified contribution to a student's profile
     public fun verify_contribution(
         cap: &VerifierCap,
@@ -317,6 +368,7 @@ module poc::poc {
         points: u64,
         clock: &Clock
     ) {
+        check_verifier_expiry(cap, clock);
         let contribution = Contribution {
             title,
             description,
@@ -343,8 +395,10 @@ module poc::poc {
         description: String,
         category: String,
         points: u64,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
+        check_verifier_expiry(cap, clock);
         let task = Task {
             id: object::new(ctx),
             title,
@@ -371,6 +425,7 @@ module poc::poc {
         task: &Task,
         clock: &Clock
     ) {
+        check_verifier_expiry(cap, clock);
         let contribution = Contribution {
             title: task.title,
             description: task.description,
@@ -393,8 +448,10 @@ module poc::poc {
     /// Verifier deactivates a task
     public fun deactivate_task(
         cap: &VerifierCap,
-        task: &mut Task
+        task: &mut Task,
+        clock: &Clock
     ) {
+        check_verifier_expiry(cap, clock);
         assert!(task.creator == cap.org_name, ENotAuthorized);
         task.is_active = false;
     }
@@ -422,6 +479,7 @@ module poc::poc {
     ) {
         // Ensure the verifier is the one who created the task (optional, or any verifier can approve?)
         // For now, let's allow any authorized verifier to approve.
+        check_verifier_expiry(cap, clock);
         review_submission_internal(submission, profile, task, STATUS_APPROVED, utf8(b"Approved by Verifier"), cap.org_name, clock);
     }
 
@@ -436,10 +494,12 @@ module poc::poc {
 
     /// Verifier rejects a submission
     public fun verifier_reject_submission(
-        _: &VerifierCap,
+        cap: &VerifierCap,
         submission: &mut TaskSubmission,
-        reason: String
+        reason: String,
+        clock: &Clock
     ) {
+        check_verifier_expiry(cap, clock);
         reject_submission_internal(submission, reason);
     }
 
