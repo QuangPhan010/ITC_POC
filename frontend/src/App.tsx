@@ -18,10 +18,11 @@ import {
   ClipboardList,
   CheckCircle,
   Settings,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 
-import { ADMIN_ADDRESS, ADMIN_CAP_ID, PACKAGE_ID, UPGRADED_PACKAGE_ID, MODULE_NAME, CLOCK_ID } from "./constants";
+import { ADMIN_ADDRESS, ADMIN_CAP_ID, GLOBAL_CONFIG_ID, PACKAGE_ID, UPGRADED_PACKAGE_ID, MODULE_NAME, CLOCK_ID } from "./constants";
 import { ProfileCard } from "./components/ProfileCard";
 import { ContributionList } from "./components/ContributionList";
 import { CreateProfileModal } from "./components/CreateProfileModal";
@@ -32,6 +33,7 @@ import { SubmissionList } from "./components/SubmissionList";
 import { SubmitTaskModal } from "./components/SubmitTaskModal";
 import { PurchaseVerifier } from "./components/PurchaseVerifier";
 import { VerifierManagement } from "./components/VerifierManagement";
+import { Dashboard } from "./components/Dashboard";
 
 export default function App() {
   const account = useCurrentAccount();
@@ -122,6 +124,31 @@ export default function App() {
     return submissionEvents?.data?.map((e) => (e.parsedJson as any).submission_id) || [];
   }, [submissionEvents]);
 
+  // Query for GlobalConfig directly by ID since it's a shared object
+  const { data: globalConfigObject } = useSuiClientQuery(
+    "getObject",
+    {
+      id: GLOBAL_CONFIG_ID,
+      options: { showContent: true },
+    },
+    { enabled: !!GLOBAL_CONFIG_ID }
+  );
+
+  const globalConfigId = GLOBAL_CONFIG_ID;
+
+  const globalConfig = useMemo(() => {
+    const obj = globalConfigObject?.data;
+    if (!obj || !obj.content || obj.content.dataType !== "moveObject") return null;
+    const fields = obj.content.fields as any;
+    return {
+      id: obj.objectId,
+      skills: fields.skills,
+      totalTasks: Number(fields.total_tasks),
+      totalSubmissions: Number(fields.total_submissions),
+      approvedSubmissions: Number(fields.approved_submissions),
+    };
+  }, [globalConfigObject]);
+
   // Query for TaskSubmission objects directly by ID
   const { data: submissionObjects, refetch: refetchSubmissions } = useSuiClientQuery(
     "multiGetObjects",
@@ -146,6 +173,8 @@ export default function App() {
       student_id: fields.student_id,
       university: fields.university,
       total_points: fields.total_points,
+      reputation: Number(fields.reputation),
+      badges: fields.badges,
       contributions: fields.contributions.map((c: any) => ({
         title: c.fields.title,
         description: c.fields.description,
@@ -172,6 +201,10 @@ export default function App() {
           points: fields.points,
           creator: fields.creator,
           is_active: fields.is_active,
+          rubric: fields.rubric,
+          minReputation: Number(fields.min_reputation),
+          requiresDoubleCheck: fields.requires_double_check,
+          deadline: fields.deadline,
         };
       });
   }, [taskObjects]);
@@ -191,7 +224,11 @@ export default function App() {
           proofUrl: fields.proof_url,
           status: fields.status,
           comment: fields.comment,
-          taskTitle: task?.title
+          taskTitle: task?.title,
+          approvers: fields.approvers,
+          requiresDoubleCheck: task?.requiresDoubleCheck,
+          rubric: task?.rubric,
+          submittedAt: Number(fields.submitted_at)
         };
       });
   }, [submissionObjects, tasks]);
@@ -254,6 +291,11 @@ export default function App() {
       return;
     }
 
+    if (!globalConfigId) {
+      alert("Error: GLOBAL_CONFIG_ID is missing. Please set it in your environment variables.");
+      return;
+    }
+
     const tx = new Transaction();
     
     if (adminCapId) {
@@ -261,10 +303,15 @@ export default function App() {
         target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::admin_create_task`,
         arguments: [
           tx.object(adminCapId),
+          tx.object(globalConfigId),
           tx.pure.string(data.title),
           tx.pure.string(data.description),
           tx.pure.string(data.category),
           tx.pure.u64(data.points.toString()),
+          tx.pure.vector("string", data.rubric || []),
+          tx.pure.u64((data.minReputation || 0).toString()),
+          tx.pure.bool(!!data.requiresDoubleCheck),
+          tx.pure.u64(data.deadline.toString()),
         ],
       });
     } else if (verifierCapId) {
@@ -272,10 +319,15 @@ export default function App() {
         target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::create_task`,
         arguments: [
           tx.object(verifierCapId),
+          tx.object(globalConfigId),
           tx.pure.string(data.title),
           tx.pure.string(data.description),
           tx.pure.string(data.category),
           tx.pure.u64(data.points.toString()),
+          tx.pure.vector("string", data.rubric || []),
+          tx.pure.u64((data.minReputation || 0).toString()),
+          tx.pure.bool(!!data.requiresDoubleCheck),
+          tx.pure.u64(data.deadline.toString()),
           tx.object(CLOCK_ID),
         ],
       });
@@ -313,6 +365,10 @@ export default function App() {
         tx.pure.string(task.category),
         tx.pure.u64(task.points.toString()),
         tx.pure.bool(task.is_active),
+        tx.pure.vector("string", task.rubric || []),
+        tx.pure.u64((task.minReputation || 0).toString()),
+        tx.pure.bool(!!task.requiresDoubleCheck),
+        tx.pure.u64(task.deadline.toString()),
       ],
     });
 
@@ -366,6 +422,10 @@ export default function App() {
 
   const handleSubmitTask = async (proofUrl: string) => {
     if (!profile || !selectedTask) return;
+    if (!globalConfigId) {
+      alert("Error: GLOBAL_CONFIG_ID is missing. Please set it in your environment variables.");
+      return;
+    }
 
     const tx = new Transaction();
     tx.moveCall({
@@ -373,7 +433,9 @@ export default function App() {
       arguments: [
         tx.object(profile.id),
         tx.object(selectedTask.id),
+        tx.object(globalConfigId),
         tx.pure.string(proofUrl),
+        tx.object(CLOCK_ID),
       ],
     });
 
@@ -395,6 +457,11 @@ export default function App() {
       return;
     }
 
+    if (!globalConfigId) {
+      alert("Error: GLOBAL_CONFIG_ID is missing. Please set it in your environment variables.");
+      return;
+    }
+
     const tx = new Transaction();
     if (adminCapId) {
       tx.moveCall({
@@ -404,6 +471,7 @@ export default function App() {
           tx.object(sub.id),
           tx.object(sub.studentId),
           tx.object(sub.taskId),
+          tx.object(globalConfigId),
           tx.object(CLOCK_ID),
         ],
       });
@@ -415,6 +483,7 @@ export default function App() {
           tx.object(sub.id),
           tx.object(sub.studentId),
           tx.object(sub.taskId),
+          tx.object(globalConfigId),
           tx.object(CLOCK_ID),
         ],
       });
@@ -438,6 +507,11 @@ export default function App() {
     
     if (!adminCapId && !verifierCapId) return;
 
+    if (!globalConfigId) {
+      alert("Error: GLOBAL_CONFIG_ID is missing. Please set it in your environment variables.");
+      return;
+    }
+
     const tx = new Transaction();
     if (adminCapId) {
       tx.moveCall({
@@ -445,6 +519,8 @@ export default function App() {
         arguments: [
           tx.object(adminCapId),
           tx.object(submissionId),
+          tx.object(sub?.studentId || ""), // Need student ID for reputation penalty
+          tx.object(globalConfigId),
           tx.pure.string(reason),
         ],
       });
@@ -454,6 +530,8 @@ export default function App() {
         arguments: [
           tx.object(verifierCapId),
           tx.object(submissionId),
+          tx.object(sub?.studentId || ""),
+          tx.object(globalConfigId),
           tx.pure.string(reason),
           tx.object(CLOCK_ID),
         ],
@@ -661,28 +739,20 @@ export default function App() {
                 <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Super Admin Dashboard</h2>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-                  <div className="flex items-center gap-2 text-amber-400">
-                    <ShieldCheck size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Admin Wallet</span>
-                  </div>
-                  <p className="mt-2 break-all font-mono text-xs text-white/70">{account.address}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-center gap-2 text-blue-300">
-                    <ClipboardList size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Total Quests</span>
-                  </div>
-                  <p className="mt-2 text-3xl font-black text-white">{tasks.length}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-center gap-2 text-green-300">
-                    <Settings size={18} />
-                    <span className="text-xs font-bold uppercase tracking-wider">Editable Now</span>
-                  </div>
-                  <p className="mt-2 text-3xl font-black text-white">{tasks.filter(t => t.is_active).length}</p>
-                </div>
+              <div className="grid gap-6">
+                <Dashboard 
+                  stats={{
+                    totalTasks: globalConfig?.totalTasks || 0,
+                    totalSubmissions: globalConfig?.totalSubmissions || 0,
+                    approvedSubmissions: globalConfig?.approvedSubmissions || 0,
+                    totalUsers: profileEvents?.data?.length || 0
+                  }}
+                  recentActivity={submissionEvents?.data?.slice(0, 5).map(e => ({
+                    type: 'submit',
+                    message: `New submission from ${e.parsedJson && (e.parsedJson as any).student_address.slice(0, 6)}...`,
+                    time: new Date(e.timestampMs ? Number(e.timestampMs) : Date.now()).toLocaleTimeString()
+                  })) || []}
+                />
               </div>
             </div>
 
@@ -705,32 +775,55 @@ export default function App() {
               onReject={handleRejectSubmission}
             />
 
-            <div className="glass-card">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
-                <CheckCircle className="text-green-500" />
-                Quick Approve Quest
-              </h3>
-              <div className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-white/40 uppercase ml-1">Student Profile ID</label>
-                    <input id="admin-approve-profile-id" className="input-field w-full text-xs" placeholder="0x..." />
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="glass-card">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+                  <CheckCircle className="text-green-500" />
+                  Quick Approve Quest
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-white/40 uppercase ml-1">Student Profile ID</label>
+                      <input id="admin-approve-profile-id" className="input-field w-full text-xs" placeholder="0x..." />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-white/40 uppercase ml-1">Quest ID</label>
+                      <input id="admin-approve-task-id" className="input-field w-full text-xs" placeholder="0x..." />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-white/40 uppercase ml-1">Quest ID</label>
-                    <input id="admin-approve-task-id" className="input-field w-full text-xs" placeholder="0x..." />
+                  <button 
+                    onClick={() => {
+                      const pId = (document.getElementById('admin-approve-profile-id') as HTMLInputElement).value;
+                      const tId = (document.getElementById('admin-approve-task-id') as HTMLInputElement).value;
+                      if (pId && tId) handleApproveTask({ studentProfileId: pId, taskId: tId });
+                    }}
+                    className="btn-primary w-full justify-center bg-amber-500/20 text-amber-500 border border-amber-500/20 hover:bg-amber-500/30"
+                  >
+                    Admin Approval & Award
+                  </button>
+                </div>
+              </div>
+
+              <div className="glass-card">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-6">
+                  <Settings className="text-primary" />
+                  Policy & Skills
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {globalConfig?.skills?.map((skill, i) => (
+                      <span key={i} className="px-2 py-1 bg-white/5 border border-white/5 rounded text-[10px] font-bold text-white/60 flex items-center gap-2">
+                        {skill}
+                        <button className="text-white/20 hover:text-red-500"><X size={10} /></button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input id="new-skill-input" className="input-field flex-1 text-xs" placeholder="Add new skill tag..." />
+                    <button className="px-4 py-2 bg-primary/20 text-primary rounded-lg text-xs font-bold border border-primary/20">Add</button>
                   </div>
                 </div>
-                <button 
-                  onClick={() => {
-                    const profileId = (document.getElementById('admin-approve-profile-id') as HTMLInputElement).value;
-                    const taskId = (document.getElementById('admin-approve-task-id') as HTMLInputElement).value;
-                    if (profileId && taskId) handleApproveTask({ studentProfileId: profileId, taskId });
-                  }}
-                  className="btn-primary w-full justify-center bg-amber-500/20 text-amber-500 border border-amber-500/20 hover:bg-amber-500/30"
-                >
-                  Admin Approval & Award
-                </button>
               </div>
             </div>
             <hr className="border-white/5 my-12" />
@@ -801,6 +894,8 @@ export default function App() {
               isAdmin={hasAdminCap}
               onEdit={handleUpdateTask}
               onDelete={handleDeleteTask}
+              userReputation={profile?.reputation || 0}
+              userSkills={profile?.contributions?.map(c => c.category) || []}
             />
           </div>
         ) : (

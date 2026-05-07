@@ -8,12 +8,15 @@ module poc::poc {
     use sui::clock::{Clock};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
+    use sui::table::{Self, Table};
+    use std::option::{Self, Option};
 
     // === Errors ===
     const ENotAuthorized: u64 = 0;
     const ETaskNotActive: u64 = 2;
     const ESubmissionAlreadyApproved: u64 = 3;
     const EInsufficientFunds: u64 = 4;
+    const ETaskExpired: u64 = 6;
 
     public struct VerifierPurchased has copy, drop {
         cap_id: ID,
@@ -30,6 +33,10 @@ module poc::poc {
     const VERIFIER_PRICE: u64 = 50000000; // 0.05 SUI for testing
     const SUBSCRIPTION_DURATION: u64 = 2592000000; // 30 days in ms
     const ADMIN_ADDRESS: address = @0xeec802d4e8e8d86a0258702d31d1932ef17226164dee712d397c5ef41aad0dfe;
+
+    const DEFAULT_REPUTATION: u64 = 100;
+    const MAX_REPUTATION: u64 = 1000;
+    const MIN_REPUTATION_PENALTY: u64 = 10;
 
     // === Structs ===
 
@@ -53,7 +60,17 @@ module poc::poc {
         student_id: String,
         university: String,
         total_points: u64,
+        reputation: u64,
+        badges: vector<String>,
+        goals: vector<Goal>,
         contributions: vector<Contribution>
+    }
+
+    public struct Goal has store, drop, copy {
+        title: String,
+        target_points: u64,
+        current_points: u64,
+        deadline: u64
     }
 
     /// Details of a specific contribution
@@ -74,7 +91,28 @@ module poc::poc {
         category: String,
         points: u64,
         creator: String,
-        is_active: bool
+        is_active: bool,
+        rubric: vector<String>,
+        min_reputation: u64,
+        requires_double_check: bool,
+        deadline: u64
+    }
+
+    /// Global configuration and statistics
+    public struct GlobalConfig has key {
+        id: UID,
+        skills: vector<String>,
+        reward_policy: Table<u64, u64>, // difficulty -> bonus
+        penalty_points: u64,
+        total_tasks: u64,
+        total_submissions: u64,
+        approved_submissions: u64
+    }
+
+    /// Capability for sub-admins to manage specific domains
+    public struct SubAdminCap has key, store {
+        id: UID,
+        domain: String
     }
 
     /// Status constants for TaskSubmission
@@ -90,7 +128,10 @@ module poc::poc {
         student_address: address,
         proof_url: String,
         status: u8,
-        comment: String
+        comment: String,
+        approvers: vector<address>,
+        submitted_at: u64,
+        evidence_requests: vector<String>
     }
 
     // === Events ===
@@ -148,6 +189,21 @@ module poc::poc {
         transfer::transfer(AdminCap {
             id: object::new(ctx)
         }, ADMIN_ADDRESS);
+
+        let mut reward_policy = table::new<u64, u64>(ctx);
+        table::add(&mut reward_policy, 1, 0); // Easy
+        table::add(&mut reward_policy, 2, 50); // Medium
+        table::add(&mut reward_policy, 3, 150); // Hard
+
+        transfer::share_object(GlobalConfig {
+            id: object::new(ctx),
+            skills: vector[utf8(b"Coding"), utf8(b"Design"), utf8(b"Research"), utf8(b"Writing")],
+            reward_policy,
+            penalty_points: 20,
+            total_tasks: 0,
+            total_submissions: 0,
+            approved_submissions: 0
+        });
     }
 
     #[test_only]
@@ -183,10 +239,15 @@ module poc::poc {
     /// Admin creates a new public task (as the protocol itself)
     public fun admin_create_task(
         _: &AdminCap,
+        config: &mut GlobalConfig,
         title: String,
         description: String,
         category: String,
         points: u64,
+        rubric: vector<String>,
+        min_reputation: u64,
+        requires_double_check: bool,
+        deadline: u64,
         ctx: &mut TxContext
     ) {
         let task = Task {
@@ -196,8 +257,14 @@ module poc::poc {
             category,
             points,
             creator: utf8(b"Protocol Admin"),
-            is_active: true
+            is_active: true,
+            rubric,
+            min_reputation,
+            requires_double_check,
+            deadline
         };
+
+        config.total_tasks = config.total_tasks + 1;
 
         event::emit(TaskCreated {
             task_id: object::id(&task),
@@ -216,13 +283,21 @@ module poc::poc {
         description: String,
         category: String,
         points: u64,
-        is_active: bool
+        is_active: bool,
+        rubric: vector<String>,
+        min_reputation: u64,
+        requires_double_check: bool,
+        deadline: u64
     ) {
         task.title = title;
         task.description = description;
         task.category = category;
         task.points = points;
         task.is_active = is_active;
+        task.rubric = rubric;
+        task.min_reputation = min_reputation;
+        task.requires_double_check = requires_double_check;
+        task.deadline = deadline;
 
         event::emit(TaskUpdated {
             task_id: object::id(task),
@@ -244,7 +319,11 @@ module poc::poc {
             category: _,
             points: _,
             creator: _,
-            is_active: _
+            is_active: _,
+            rubric: _,
+            min_reputation: _,
+            requires_double_check: _,
+            deadline: _
         } = task;
         object::delete(id);
 
@@ -294,6 +373,9 @@ module poc::poc {
             student_id,
             university,
             total_points: 0,
+            reputation: DEFAULT_REPUTATION,
+            badges: vector::empty(),
+            goals: vector::empty(),
             contributions: vector::empty()
         };
 
@@ -309,11 +391,15 @@ module poc::poc {
     public fun submit_task(
         profile: &StudentProfile,
         task: &Task,
+        config: &mut GlobalConfig,
         proof_url: String,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         assert!(task.is_active, ETaskNotActive);
         assert!(profile.owner == tx_context::sender(ctx), ENotAuthorized);
+        assert!(profile.reputation >= task.min_reputation, ENotAuthorized);
+        assert!(sui::clock::timestamp_ms(clock) <= task.deadline, ETaskExpired);
 
         let submission = TaskSubmission {
             id: object::new(ctx),
@@ -322,8 +408,13 @@ module poc::poc {
             student_address: profile.owner,
             proof_url,
             status: STATUS_PENDING,
-            comment: utf8(b"")
+            comment: utf8(b""),
+            approvers: vector::empty(),
+            submitted_at: sui::clock::timestamp_ms(clock),
+            evidence_requests: vector::empty()
         };
+
+        config.total_submissions = config.total_submissions + 1;
 
         event::emit(TaskSubmitted {
             submission_id: object::id(&submission),
@@ -426,10 +517,15 @@ module poc::poc {
     /// Verifier creates a new public task
     public fun create_task(
         cap: &VerifierCap,
+        config: &mut GlobalConfig,
         title: String,
         description: String,
         category: String,
         points: u64,
+        rubric: vector<String>,
+        min_reputation: u64,
+        requires_double_check: bool,
+        deadline: u64,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
@@ -441,8 +537,14 @@ module poc::poc {
             category,
             points,
             creator: cap.org_name,
-            is_active: true
+            is_active: true,
+            rubric,
+            min_reputation,
+            requires_double_check,
+            deadline
         };
+
+        config.total_tasks = config.total_tasks + 1;
 
         event::emit(TaskCreated {
             task_id: object::id(&task),
@@ -499,9 +601,11 @@ module poc::poc {
         submission: &mut TaskSubmission,
         profile: &mut StudentProfile,
         task: &Task,
-        clock: &Clock
+        config: &mut GlobalConfig,
+        clock: &Clock,
+        ctx: &mut TxContext
     ) {
-        review_submission_internal(submission, profile, task, STATUS_APPROVED, utf8(b"Approved by Admin"), utf8(b"Protocol Admin"), clock);
+        review_submission_internal(submission, profile, task, config, STATUS_APPROVED, utf8(b"Approved by Admin"), utf8(b"Protocol Admin"), tx_context::sender(ctx), clock);
     }
 
     /// Verifier approves a submission
@@ -510,32 +614,36 @@ module poc::poc {
         submission: &mut TaskSubmission,
         profile: &mut StudentProfile,
         task: &Task,
-        clock: &Clock
+        config: &mut GlobalConfig,
+        clock: &Clock,
+        ctx: &mut TxContext
     ) {
-        // Ensure the verifier is the one who created the task (optional, or any verifier can approve?)
-        // For now, let's allow any authorized verifier to approve.
         check_verifier_expiry(cap, clock);
-        review_submission_internal(submission, profile, task, STATUS_APPROVED, utf8(b"Approved by Verifier"), cap.org_name, clock);
+        review_submission_internal(submission, profile, task, config, STATUS_APPROVED, utf8(b"Approved by Verifier"), cap.org_name, tx_context::sender(ctx), clock);
     }
 
     /// Admin rejects a submission
     public fun admin_reject_submission(
         _: &AdminCap,
         submission: &mut TaskSubmission,
+        profile: &mut StudentProfile,
+        config: &GlobalConfig,
         reason: String
     ) {
-        reject_submission_internal(submission, reason);
+        reject_submission_internal(submission, profile, config, reason);
     }
 
     /// Verifier rejects a submission
     public fun verifier_reject_submission(
         cap: &VerifierCap,
         submission: &mut TaskSubmission,
+        profile: &mut StudentProfile,
+        config: &GlobalConfig,
         reason: String,
         clock: &Clock
     ) {
         check_verifier_expiry(cap, clock);
-        reject_submission_internal(submission, reason);
+        reject_submission_internal(submission, profile, config, reason);
     }
 
     // === Internal Functions ===
@@ -544,53 +652,77 @@ module poc::poc {
         submission: &mut TaskSubmission,
         profile: &mut StudentProfile,
         task: &Task,
+        config: &mut GlobalConfig,
         status: u8,
         comment: String,
         verified_by: String,
+        verifier_address: address,
         clock: &Clock
     ) {
         assert!(submission.status == STATUS_PENDING, ESubmissionAlreadyApproved);
         assert!(submission.task_id == object::id(task), ENotAuthorized);
         assert!(submission.student_id == object::id(profile), ENotAuthorized);
 
-        submission.status = status;
-        submission.comment = comment;
+        // Check if verifier already approved
+        assert!(!vector::contains(&submission.approvers, &verifier_address), ENotAuthorized);
+        vector::push_back(&mut submission.approvers, verifier_address);
 
-        if (status == STATUS_APPROVED) {
-            let contribution = Contribution {
-                title: task.title,
-                description: task.description,
-                category: task.category,
-                points: task.points,
-                timestamp: sui::clock::timestamp_ms(clock),
-                verified_by
-            };
+        let required_approvals = if (task.requires_double_check) 2 else 1;
+        
+        if (vector::length(&submission.approvers) >= required_approvals) {
+            submission.status = status;
+            submission.comment = comment;
 
-            vector::push_back(&mut profile.contributions, contribution);
-            profile.total_points = profile.total_points + task.points;
+            if (status == STATUS_APPROVED) {
+                let contribution = Contribution {
+                    title: task.title,
+                    description: task.description,
+                    category: task.category,
+                    points: task.points,
+                    timestamp: sui::clock::timestamp_ms(clock),
+                    verified_by
+                };
 
-            event::emit(SubmissionApproved {
-                submission_id: object::id(submission),
-                task_id: object::id(task),
-                student_id: object::id(profile),
-                points: task.points
-            });
+                vector::push_back(&mut profile.contributions, contribution);
+                profile.total_points = profile.total_points + task.points;
+                
+                // Reputation boost
+                profile.reputation = if (profile.reputation + 5 > MAX_REPUTATION) MAX_REPUTATION else profile.reputation + 5;
+                
+                config.approved_submissions = config.approved_submissions + 1;
 
-            event::emit(ContributionAdded {
-                profile_id: object::id(profile),
-                title: task.title,
-                points: task.points
-            });
+                event::emit(SubmissionApproved {
+                    submission_id: object::id(submission),
+                    task_id: object::id(task),
+                    student_id: object::id(profile),
+                    points: task.points
+                });
+
+                event::emit(ContributionAdded {
+                    profile_id: object::id(profile),
+                    title: task.title,
+                    points: task.points
+                });
+            }
         };
     }
 
     fun reject_submission_internal(
         submission: &mut TaskSubmission,
+        profile: &mut StudentProfile,
+        config: &GlobalConfig,
         reason: String
     ) {
         assert!(submission.status == STATUS_PENDING, ESubmissionAlreadyApproved);
         submission.status = STATUS_REJECTED;
         submission.comment = reason;
+
+        // Reputation penalty
+        if (profile.reputation > config.penalty_points + MIN_REPUTATION_PENALTY) {
+            profile.reputation = profile.reputation - config.penalty_points;
+        } else {
+            profile.reputation = MIN_REPUTATION_PENALTY;
+        };
 
         event::emit(SubmissionRejected {
             submission_id: object::id(submission),
@@ -598,6 +730,56 @@ module poc::poc {
             student_id: submission.student_id,
             reason
         });
+    }
+
+    // === Admin Management Functions ===
+
+    public fun add_skill(
+        _: &AdminCap,
+        config: &mut GlobalConfig,
+        skill: String
+    ) {
+        vector::push_back(&mut config.skills, skill);
+    }
+
+    public fun remove_skill(
+        _: &AdminCap,
+        config: &mut GlobalConfig,
+        index: u64
+    ) {
+        vector::remove(&mut config.skills, index);
+    }
+
+    public fun update_penalty(
+        _: &AdminCap,
+        config: &mut GlobalConfig,
+        new_penalty: u64
+    ) {
+        config.penalty_points = new_penalty;
+    }
+
+    public fun issue_sub_admin(
+        _: &AdminCap,
+        domain: String,
+        recipient: address,
+        ctx: &mut TxContext
+    ) {
+        transfer::transfer(SubAdminCap {
+            id: object::new(ctx),
+            domain
+        }, recipient);
+    }
+
+    // === Verifier Evidence Request ===
+
+    public fun request_evidence(
+        cap: &VerifierCap,
+        submission: &mut TaskSubmission,
+        message: String,
+        clock: &Clock
+    ) {
+        check_verifier_expiry(cap, clock);
+        vector::push_back(&mut submission.evidence_requests, message);
     }
 
     // === Getters ===
