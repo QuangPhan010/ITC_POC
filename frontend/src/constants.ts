@@ -1,6 +1,6 @@
-export const PACKAGE_ID = "0x080d33a51f1845410bbeee431417f6ce692de9199fb836975ef9680b6148a4a9";
-export const UPGRADED_PACKAGE_ID = "0x080d33a51f1845410bbeee431417f6ce692de9199fb836975ef9680b6148a4a9";
-export const MODULE_NAME = "poc";
-export const ADMIN_ADDRESS = "0xeec802d4e8e8d86a0258702d31d1932ef17226164dee712d397c5ef41aad0dfe";
-export const ADMIN_CAP_ID = "0xb80f02d584a3bc220735632536ad11cccf062bdd6f69e1ea19c0f3fcf8112569";
-export const CLOCK_ID = "0x6";
+export const PACKAGE_ID = import.meta.env.VITE_PACKAGE_ID || "";
+export const UPGRADED_PACKAGE_ID = import.meta.env.VITE_UPGRADED_PACKAGE_ID || "";
+export const MODULE_NAME = import.meta.env.VITE_MODULE_NAME || "poc";
+export const ADMIN_ADDRESS = import.meta.env.VITE_ADMIN_ADDRESS || "";
+export const ADMIN_CAP_ID = import.meta.env.VITE_ADMIN_CAP_ID || "";
+export const CLOCK_ID = import.meta.env.VITE_CLOCK_ID || "0x6";
