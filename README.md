@@ -16,8 +16,13 @@ Dự án này là một Proof of Concept (POC) cho phép các tổ chức (Verif
 
 ## 📂 Cấu trúc thư mục
 
-- `/poc`: Chứa mã nguồn Smart Contract viết bằng ngôn ngữ Move.
-- `/frontend`: Mã nguồn ứng dụng web tương tác với người dùng.
+- **`/poc`**: Chứa mã nguồn Smart Contract (Sui Move)
+  - `sources/poc.move`: Module lõi quản lý Hồ sơ, Nhiệm vụ và Quyền hạn.
+  - `sources/vote.move`: Module quản trị phi tập trung (Upvote, Reward, Auto-finalize).
+- **`/frontend`**: Ứng dụng web React/Vite
+  - `src/components/`: Các thành phần giao diện chung (TaskBoard, ProfileCard...).
+  - `src/vote/`: Các thành phần chuyên biệt cho hệ thống Voting & Curation.
+  - `src/constants.ts`: Cấu hình địa chỉ Package và Object ID trên mạng Sui.
 
 ## ✨ Tính năng mới cập nhật (v3.0)
 - **Hệ thống Bình chọn Phi tập trung**: Mỗi bài nộp giờ đây có thể được bình chọn bởi cộng đồng.
