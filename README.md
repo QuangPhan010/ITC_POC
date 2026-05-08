@@ -19,7 +19,13 @@ Dự án này là một Proof of Concept (POC) cho phép các tổ chức (Verif
 - `/poc`: Chứa mã nguồn Smart Contract viết bằng ngôn ngữ Move.
 - `/frontend`: Mã nguồn ứng dụng web tương tác với người dùng.
 
-## 📋 Chức năng chi tiết
+## 📋 Chức năng cốt lõi
+- **SBT Profile**: Hồ sơ năng lực không thể chuyển nhượng, định danh sinh viên trên Web3.
+- **Task System**: Hệ thống đăng tải và quản lý nhiệm vụ từ Admin và các tổ chức (Verifiers).
+- **Hybrid Review**: Kết hợp xác thực từ Verifier và bình chọn từ cộng đồng (Upvote).
+- **Community Finalize**: Tự động duyệt bài nộp khi đạt đủ 5 phiếu bầu từ cộng đồng.
+- **Curator Reward**: Cơ chế thưởng XP và uy tín cho người dùng tham gia đánh giá chất lượng bài nộp.
+- **On-chain Evidence**: Toàn bộ minh chứng và kết quả xác thực được lưu trữ minh bạch trên blockchain.
 
 Vui lòng xem chi tiết tại file: [**chucnang.md**](./chucnang.md)
 

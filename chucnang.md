@@ -25,7 +25,8 @@ Là các đơn vị (Câu lạc bộ, Trường học, Công ty) nắm giữ `Ve
 - **Quản lý Hồ sơ (Soulbound Profile)**: Tạo hồ sơ định danh duy nhất trên chuỗi (không thể chuyển nhượng), lưu trữ lịch sử đóng góp và thành tích.
 - **Tham gia nhiệm vụ**: Tìm kiếm nhiệm vụ trên Task Board, nộp minh chứng (URL/Proof) để được xác thực.
 - **Xây dựng Uy tín (Reputation)**: Tích lũy điểm uy tín qua các nhiệm vụ hoàn thành tốt. Điểm uy tín cao giúp mở khóa các nhiệm vụ cao cấp hơn.
-- **Bình chọn (Voting)**: Tham gia bình chọn cho các bài nộp tốt nhất trong các nhiệm vụ thuộc chế độ "Competition".
+- **Bình chọn (Voting)**: Tham gia bình chọn cho các bài nộp chất lượng. Mỗi bài nộp có thể nhận được nhiều lượt bình chọn từ cộng đồng.
+- **Nhận thưởng Khảo thí (Curator Rewards)**: Nhận điểm thưởng XP và uy tín khi tham gia bình chọn cho các bài nộp sau đó được phê duyệt thành công.
 - **Nhận thưởng**: Đổi điểm thưởng tích lũy (Points) lấy các phần thưởng tương ứng.
 
 ---
@@ -43,9 +44,10 @@ Là các đơn vị (Câu lạc bộ, Trường học, Công ty) nắm giữ `Ve
 - **Evidence Requests**: Verifier có thể yêu cầu người dùng bổ sung thêm minh chứng nếu cần thiết.
 
 ### 3. Chế độ Thi đấu (Competition Mode)
-- **Peer-to-Peer Voting**: Trong các nhiệm vụ đặc biệt, cộng đồng có quyền bình chọn cho bài nộp xuất sắc nhất.
-- **Hệ thống Deadline kép**: Phân định rõ thời gian nộp bài và thời gian bình chọn.
-- **Tự động xác định người chiến thắng**: Hệ thống tự động chọn ra bài nộp có số phiếu cao nhất để trao thưởng lớn nhất.
+- **Hệ thống Bình chọn Phi tập trung**: Mỗi ví chỉ được vote tối đa 1 lần cho mỗi bài nộp. Tổng số vote được hiển thị công khai để đánh giá chất lượng.
+- **Tự động Phê duyệt bởi Cộng đồng (Community Finalize)**: Khi một bài nộp đạt ngưỡng 5 upvotes, bất kỳ ai cũng có thể kích hoạt chức năng "Finalize" để phê duyệt bài nộp ngay lập tức mà không cần Admin/Verifier.
+- **Thưởng Curator**: Khuyến khích cộng đồng tham gia giám định bằng cách thưởng +5 XP và Reputation cho tất cả những người đã vote cho bài nộp được duyệt.
+- **Tự động xác định người chiến thắng (Competition)**: Hệ thống tự động chọn ra bài nộp có số phiếu cao nhất để trao thưởng lớn nhất.
 
 ### 4. Hệ thống Hồ sơ Năng lực & Uy tín
 - **On-chain Resume**: Mỗi đóng góp được xác thực sẽ trở thành một bản ghi vĩnh viễn trên blockchain gắn liền với địa chỉ ví của người dùng.
