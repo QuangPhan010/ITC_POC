@@ -48,6 +48,8 @@ interface TaskBoardProps {
   onDelete?: (taskId: string) => Promise<void>;
   onVote?: (taskId: string, submissionId: string) => Promise<void>;
   onClaimWinner?: (taskId: string, submissionId: string) => Promise<void>;
+  onCommunityFinalize?: (submissionId: string) => Promise<void>;
+  onClaimCuratorReward?: (submissionId: string) => Promise<void>;
   userReputation?: number;
   userSkills?: string[];
   onViewProfile?: (studentId: string) => void;
@@ -65,6 +67,8 @@ export function TaskBoard({
   onDelete, 
   onVote,
   onClaimWinner,
+  onCommunityFinalize,
+  onClaimCuratorReward,
   userReputation = 0, 
   userSkills = [],
   onViewProfile
@@ -520,14 +524,35 @@ export function TaskBoard({
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() => {
-                          onVote?.(viewingSubmissionsTaskId, sub.id);
-                        }}
-                        className="btn-primary py-2 px-6 text-[10px] shadow-none"
-                      >
-                        Vote
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {sub.status === 0 && sub.voteCount >= 5 && (
+                          <button
+                            onClick={() => onCommunityFinalize?.(sub.id)}
+                            className="px-4 py-2 bg-green-500/20 text-green-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-green-500/20 hover:bg-green-500/30 transition-all"
+                          >
+                            Finalize
+                          </button>
+                        )}
+                        
+                        {sub.status === 1 && (
+                          <button
+                            onClick={() => onClaimCuratorReward?.(sub.id)}
+                            className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest border border-primary/20 hover:bg-primary/20 transition-all"
+                          >
+                            Claim Reward
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onVote?.(viewingSubmissionsTaskId, sub.id);
+                          }}
+                          className="btn-primary py-2 px-6 text-[10px] shadow-none"
+                          disabled={sub.status !== 0}
+                        >
+                          Vote
+                        </button>
+                      </div>
                     </div>
                   ))
               )}
