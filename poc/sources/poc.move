@@ -148,6 +148,15 @@ module itc_poc_v3::poc {
         vote_count: u64
     }
 
+    /// Represents a report against a user
+    public struct Report has key {
+        id: UID,
+        reporter: address,
+        target_id: ID, // StudentProfile ID
+        reason: String,
+        timestamp: u64
+    }
+
     // === Events ===
 
     public struct ProfileCreated has copy, drop {
@@ -209,6 +218,12 @@ module itc_poc_v3::poc {
     public struct RewardsClaimed has copy, drop {
         profile_id: ID,
         amount: u64
+    }
+
+    public struct UserReported has copy, drop {
+        report_id: ID,
+        target_id: ID,
+        reporter: address
     }
 
     // === Initializer ===
@@ -798,6 +813,35 @@ module itc_poc_v3::poc {
             submission.comment = comment;
 
             if (status == STATUS_APPROVED) {
+        }
+    }
+
+    // === User Reporting Functions ===
+
+    /// Anyone can report a user for suspicious behavior
+    public fun report_user(
+        target: &StudentProfile,
+        reason: String,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let reporter = tx_context::sender(ctx);
+        let report = Report {
+            id: object::new(ctx),
+            reporter,
+            target_id: object::id(target),
+            reason,
+            timestamp: sui::clock::timestamp_ms(clock)
+        };
+
+        event::emit(UserReported {
+            report_id: object::id(&report),
+            target_id: object::id(target),
+            reporter
+        });
+
+        transfer::share_object(report);
+    }
                 let contribution = Contribution {
                     title: task.title,
                     description: task.description,

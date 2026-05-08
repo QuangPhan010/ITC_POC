@@ -37,6 +37,7 @@ import { Dashboard } from "./components/Dashboard";
 import { MyWorkspace } from "./components/MyWorkspace";
 import { ClaimPortal } from "./components/ClaimPortal";
 import { NotificationCenter } from "./components/NotificationCenter";
+import { UserProfileView } from "./components/UserProfileView";
 
 export default function App() {
   const account = useCurrentAccount();
@@ -47,6 +48,7 @@ export default function App() {
   const [selectedTask, setSelectedTask] = useState<{ id: string; title: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "tasks" | "workspace" | "rewards" | "verifier" | "admin">("profile");
   const [isBusy, setIsBusy] = useState(false);
+  const [viewingStudentId, setViewingStudentId] = useState<string | null>(null);
 
   // Query ProfileCreated events to find the user's shared profile
   const { data: profileEvents, refetch: refetchProfileEvents, isLoading: isEventsLoading } = useSuiClientQuery(
@@ -889,6 +891,8 @@ export default function App() {
           <div className="flex items-center justify-center py-40">
             <Loader2 className="animate-spin text-primary" size={40} />
           </div>
+        ) : viewingStudentId ? (
+          <UserProfileView studentId={viewingStudentId} onBack={() => setViewingStudentId(null)} />
         ) : activeTab === "admin" ? (
           <div className="space-y-12 animate-in fade-in duration-500">
             <div className="space-y-5">
@@ -931,6 +935,7 @@ export default function App() {
               submissions={submissions} 
               onApprove={handleApproveSubmission}
               onReject={handleRejectSubmission}
+              onViewProfile={setViewingStudentId}
             />
 
             <div className="grid md:grid-cols-2 gap-8">
@@ -1024,6 +1029,7 @@ export default function App() {
                       submissions={submissions} 
                       onApprove={handleApproveSubmission}
                       onReject={handleRejectSubmission}
+                      onViewProfile={setViewingStudentId}
                     />
                   </>
                 ) : (
@@ -1069,6 +1075,7 @@ export default function App() {
               onVote={handleVoteSubmission}
               submissions={submissions}
               onClaimWinner={handleClaimWinner}
+              onViewProfile={setViewingStudentId}
             />
           </div>
         ) : (

@@ -50,6 +50,7 @@ interface TaskBoardProps {
   onClaimWinner?: (taskId: string, submissionId: string) => Promise<void>;
   userReputation?: number;
   userSkills?: string[];
+  onViewProfile?: (studentId: string) => void;
 }
 
 export function TaskBoard({ 
@@ -65,7 +66,8 @@ export function TaskBoard({
   onVote,
   onClaimWinner,
   userReputation = 0, 
-  userSkills = [] 
+  userSkills = [],
+  onViewProfile
 }: TaskBoardProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
@@ -504,7 +506,12 @@ export function TaskBoard({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-white font-mono">{sub.studentAddress.slice(0, 10)}...</p>
+                            <button 
+                              onClick={() => onViewProfile?.(sub.studentId)}
+                              className="text-sm font-bold text-primary hover:text-accent font-mono cursor-pointer border-none bg-transparent p-0"
+                            >
+                              {sub.studentAddress.slice(0, 10)}...
+                            </button>
                             <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-tighter">
                               {sub.voteCount || 0} Votes
                             </span>

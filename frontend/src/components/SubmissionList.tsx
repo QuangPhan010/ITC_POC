@@ -21,9 +21,10 @@ interface SubmissionListProps {
   onApprove: (submission: Submission) => Promise<void>;
   onReject: (submissionId: string, reason: string) => Promise<void>;
   onRequestEvidence?: (submissionId: string, message: string) => Promise<void>;
+  onViewProfile?: (studentId: string) => void;
 }
 
-export function SubmissionList({ submissions, onApprove, onReject, onRequestEvidence }: SubmissionListProps) {
+export function SubmissionList({ submissions, onApprove, onReject, onRequestEvidence, onViewProfile }: SubmissionListProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // Sort by urgency (requires double check first, then by date)
@@ -88,7 +89,12 @@ export function SubmissionList({ submissions, onApprove, onReject, onRequestEvid
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Student Address</p>
-                      <p className="text-sm text-white/80 font-mono truncate">{sub.studentAddress}</p>
+                      <button 
+                        onClick={() => onViewProfile?.(sub.studentId)}
+                        className="text-sm text-primary hover:text-accent font-mono truncate bg-transparent border-none p-0 cursor-pointer text-left"
+                      >
+                        {sub.studentAddress}
+                      </button>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Submitted At</p>

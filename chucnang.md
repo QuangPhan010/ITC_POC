@@ -58,3 +58,7 @@ Là các đơn vị (Câu lạc bộ, Trường học, Công ty) nắm giữ `Ve
 
 ### 6. Trung tâm Thông báo (Notification Center)
 - Cập nhật thời gian thực khi có Task mới, bài nộp được duyệt, hoặc khi sắp đến hạn chót của nhiệm vụ đang tham gia.
+
+### 7. Khám phá & Giám sát Cộng đồng
+- **Xem Profile người dùng**: Người dùng có thể nhấn vào địa chỉ/ID của sinh viên khác để xem chi tiết hồ sơ năng lực, uy tín và lịch sử đóng góp.
+- **Hệ thống Báo cáo (Reporting)**: Bất kỳ người dùng nào cũng có thể báo cáo hành vi bất thường của người khác. Báo cáo được ghi lại on-chain để Admin kiểm tra và xử lý.
