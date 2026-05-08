@@ -34,6 +34,9 @@ import { SubmitTaskModal } from "./components/SubmitTaskModal";
 import { PurchaseVerifier } from "./components/PurchaseVerifier";
 import { VerifierManagement } from "./components/VerifierManagement";
 import { Dashboard } from "./components/Dashboard";
+import { MyWorkspace } from "./components/MyWorkspace";
+import { ClaimPortal } from "./components/ClaimPortal";
+import { NotificationCenter } from "./components/NotificationCenter";
 
 export default function App() {
   const account = useCurrentAccount();
@@ -42,7 +45,8 @@ export default function App() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<{ id: string; title: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "tasks" | "verifier" | "admin">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "tasks" | "workspace" | "rewards" | "verifier" | "admin">("profile");
+  const [isBusy, setIsBusy] = useState(false);
 
   // Query ProfileCreated events to find the user's shared profile
   const { data: profileEvents, refetch: refetchProfileEvents, isLoading: isEventsLoading } = useSuiClientQuery(
@@ -200,11 +204,16 @@ export default function App() {
           category: fields.category,
           points: fields.points,
           creator: fields.creator,
-          is_active: fields.is_active,
+          isActive: fields.is_active,
           rubric: fields.rubric,
           minReputation: Number(fields.min_reputation),
           requiresDoubleCheck: fields.requires_double_check,
           deadline: fields.deadline,
+          isCompetition: fields.is_competition,
+          votingDeadline: fields.voting_deadline,
+          topSubmission: fields.top_submission?.fields?.contents || fields.top_submission,
+          maxVotes: fields.max_votes,
+          winnerClaimed: fields.winner_claimed,
         };
       });
   }, [taskObjects]);
@@ -228,7 +237,8 @@ export default function App() {
           approvers: fields.approvers,
           requiresDoubleCheck: task?.requiresDoubleCheck,
           rubric: task?.rubric,
-          submittedAt: Number(fields.submitted_at)
+          submittedAt: Number(fields.submitted_at),
+          voteCount: Number(fields.vote_count || 0)
         };
       });
   }, [submissionObjects, tasks]);
@@ -312,6 +322,8 @@ export default function App() {
           tx.pure.u64((data.minReputation || 0).toString()),
           tx.pure.bool(!!data.requiresDoubleCheck),
           tx.pure.u64(data.deadline.toString()),
+          tx.pure.bool(!!data.isCompetition),
+          tx.pure.u64((data.votingDeadline || 0).toString()),
         ],
       });
     } else if (verifierCapId) {
@@ -328,6 +340,8 @@ export default function App() {
           tx.pure.u64((data.minReputation || 0).toString()),
           tx.pure.bool(!!data.requiresDoubleCheck),
           tx.pure.u64(data.deadline.toString()),
+          tx.pure.bool(!!data.isCompetition),
+          tx.pure.u64((data.votingDeadline || 0).toString()),
           tx.object(CLOCK_ID),
         ],
       });
@@ -364,11 +378,13 @@ export default function App() {
         tx.pure.string(task.description),
         tx.pure.string(task.category),
         tx.pure.u64(task.points.toString()),
-        tx.pure.bool(task.is_active),
+        tx.pure.bool(task.isActive),
         tx.pure.vector("string", task.rubric || []),
         tx.pure.u64((task.minReputation || 0).toString()),
         tx.pure.bool(!!task.requiresDoubleCheck),
         tx.pure.u64(task.deadline.toString()),
+        tx.pure.bool(!!task.isCompetition),
+        tx.pure.u64((task.votingDeadline || 0).toString()),
       ],
     });
 
@@ -446,6 +462,59 @@ export default function App() {
     } catch (error: any) {
       console.error(error);
       alert(`Submission failed: ${error.message}`);
+    }
+  };
+
+  const handleVoteSubmission = async (taskId: string, submissionId: string) => {
+    if (!profile) return;
+    
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::vote_submission`,
+      arguments: [
+        tx.object(profile.id),
+        tx.object(taskId),
+        tx.object(submissionId),
+        tx.object(CLOCK_ID),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Vote cast successfully!");
+      setTimeout(() => refetchSubmissions(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Voting failed: ${error.message}`);
+    }
+  };
+
+  const handleClaimWinner = async (taskId: string, submissionId: string) => {
+    if (!profile || !globalConfigId) return;
+
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::claim_competition_reward`,
+      arguments: [
+        tx.object(profile.id),
+        tx.object(taskId),
+        tx.object(submissionId),
+        tx.object(globalConfigId),
+        tx.object(CLOCK_ID),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Winner reward claimed successfully!");
+      setTimeout(() => {
+        refetchProfile();
+        refetchSubmissions();
+        refetchTasks();
+      }, 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Claim failed: ${error.message}`);
     }
   };
 
@@ -638,6 +707,78 @@ export default function App() {
     alert("Manual issuance is deprecated. Use the automated purchase system.");
   };
 
+  const handleUpdateSubmission = async (submissionId: string, newProofUrl: string) => {
+    if (!profile) return;
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) return;
+
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::update_submission`,
+      arguments: [
+        tx.object(profile.id),
+        tx.object(submissionId),
+        tx.object(submission.taskId),
+        tx.pure.string(newProofUrl),
+        tx.object(CLOCK_ID),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Submission updated successfully!");
+      setTimeout(() => refetchSubmissions(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Update failed: ${error.message}`);
+    }
+  };
+
+  const handleDisputeSubmission = async (submissionId: string, reason: string) => {
+    if (!profile) return;
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::dispute_submission`,
+      arguments: [
+        tx.object(profile.id),
+        tx.object(submissionId),
+        tx.pure.string(reason),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Dispute submitted. Admin will review shortly.");
+      setTimeout(() => refetchSubmissions(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Dispute failed: ${error.message}`);
+    }
+  };
+
+  const handleClaimRewards = async () => {
+    if (!profile) return;
+    setIsBusy(true);
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::claim_rewards`,
+      arguments: [
+        tx.object(profile.id),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Rewards claimed successfully!");
+      setTimeout(() => refetchProfile(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Claim failed: ${error.message}`);
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
@@ -675,6 +816,22 @@ export default function App() {
                 Quests
               </button>
               <button
+                onClick={() => setActiveTab("workspace")}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "workspace" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                My Workspace
+              </button>
+              <button
+                onClick={() => setActiveTab("rewards")}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  activeTab === "rewards" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                Rewards
+              </button>
+              <button
                 onClick={() => setActiveTab("verifier")}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                   activeTab === "verifier" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
@@ -707,6 +864,7 @@ export default function App() {
           >
             <RefreshCw size={18} />
           </button>
+          <NotificationCenter tasks={tasks} submissions={submissions.filter(s => s.studentAddress === account?.address)} />
           <ConnectButton />
         </div>
       </nav>
@@ -885,6 +1043,18 @@ export default function App() {
               <PurchaseVerifier onPurchase={handlePurchaseVerifier} priceSui={0.05} />
             )}
           </div>
+        ) : activeTab === "workspace" ? (
+          <MyWorkspace 
+            submissions={submissions.filter(s => s.studentAddress === account?.address)}
+            onUpdateSubmission={handleUpdateSubmission}
+            onDisputeSubmission={handleDisputeSubmission}
+          />
+        ) : activeTab === "rewards" ? (
+          <ClaimPortal 
+            totalPoints={profile?.total_points || 0}
+            onClaim={handleClaimRewards}
+            isBusy={isBusy}
+          />
         ) : activeTab === "tasks" ? (
           <div className="animate-in fade-in duration-500">
             <TaskBoard
@@ -896,6 +1066,9 @@ export default function App() {
               onDelete={handleDeleteTask}
               userReputation={profile?.reputation || 0}
               userSkills={profile?.contributions?.map(c => c.category) || []}
+              onVote={handleVoteSubmission}
+              submissions={submissions}
+              onClaimWinner={handleClaimWinner}
             />
           </div>
         ) : (

@@ -11,6 +11,8 @@ interface CreateTaskFormProps {
     minReputation: number;
     requiresDoubleCheck: boolean;
     deadline: number;
+    isCompetition: boolean;
+    votingDeadline: number;
   }) => Promise<void>;
 }
 
@@ -23,9 +25,14 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
     minReputation: 0,
     requiresDoubleCheck: false,
     deadline: (() => {
-      // Default to 7 days from now
       const d = new Date();
       d.setDate(d.getDate() + 7);
+      return d.toISOString().slice(0, 16);
+    })(),
+    isCompetition: false,
+    votingDeadline: (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 10); // Default voting 3 days after deadline
       return d.toISOString().slice(0, 16);
     })()
   });
@@ -40,6 +47,7 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
       await onSubmit({
         ...formData,
         deadline: new Date(formData.deadline).getTime(),
+        votingDeadline: new Date(formData.votingDeadline).getTime(),
         rubric: rubricItems.filter(item => item.trim() !== ""),
       });
       setFormData({ ...formData, title: "", description: "" });
@@ -110,15 +118,39 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Quest Deadline</label>
-          <input
-            type="datetime-local"
-            required
-            className="input-field w-full text-sm py-3"
-            value={formData.deadline}
-            onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Quest Deadline (Submission)</label>
+            <input
+              type="datetime-local"
+              required
+              className="input-field w-full text-sm py-3"
+              value={formData.deadline}
+              onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Competition Mode</label>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, isCompetition: !formData.isCompetition })}
+                className={`w-10 h-5 rounded-full p-1 transition-all ${formData.isCompetition ? "bg-primary" : "bg-white/10"}`}
+              >
+                <div className={`w-3 h-3 bg-white rounded-full transition-transform ${formData.isCompetition ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+            {formData.isCompetition && (
+              <input
+                type="datetime-local"
+                required
+                className="input-field w-full text-sm py-3 animate-in fade-in slide-in-from-top-2 duration-300"
+                value={formData.votingDeadline}
+                onChange={(e) => setFormData({ ...formData, votingDeadline: e.target.value })}
+              />
+            )}
+          </div>
         </div>
         
         <div className="space-y-2">

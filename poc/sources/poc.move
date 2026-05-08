@@ -17,6 +17,12 @@ module poc::poc {
     const ESubmissionAlreadyApproved: u64 = 3;
     const EInsufficientFunds: u64 = 4;
     const ETaskExpired: u64 = 6;
+    const EVotingNotStarted: u64 = 7;
+    const EVotingFinished: u64 = 8;
+    const EAlreadyVoted: u64 = 9;
+    const ECannotVoteOwnSubmission: u64 = 10;
+    const ENotCompetition: u64 = 11;
+    const EWinnerNotDetermined: u64 = 12;
 
     public struct VerifierPurchased has copy, drop {
         cap_id: ID,
@@ -95,7 +101,13 @@ module poc::poc {
         rubric: vector<String>,
         min_reputation: u64,
         requires_double_check: bool,
-        deadline: u64
+        deadline: u64,
+        is_competition: bool,
+        voting_deadline: u64,
+        top_submission: Option<ID>,
+        max_votes: u64,
+        voted_users: Table<address, bool>,
+        winner_claimed: bool
     }
 
     /// Global configuration and statistics
@@ -119,6 +131,7 @@ module poc::poc {
     const STATUS_PENDING: u8 = 0;
     const STATUS_APPROVED: u8 = 1;
     const STATUS_REJECTED: u8 = 2;
+    const STATUS_DISPUTED: u8 = 3;
 
     /// A student's submission for a task
     public struct TaskSubmission has key {
@@ -131,7 +144,8 @@ module poc::poc {
         comment: String,
         approvers: vector<address>,
         submitted_at: u64,
-        evidence_requests: vector<String>
+        evidence_requests: vector<String>,
+        vote_count: u64
     }
 
     // === Events ===
@@ -181,6 +195,20 @@ module poc::poc {
         task_id: ID,
         student_id: ID,
         reason: String
+    }
+
+    public struct SubmissionUpdated has copy, drop {
+        submission_id: ID
+    }
+
+    public struct SubmissionDisputed has copy, drop {
+        submission_id: ID,
+        reason: String
+    }
+
+    public struct RewardsClaimed has copy, drop {
+        profile_id: ID,
+        amount: u64
     }
 
     // === Initializer ===
@@ -248,6 +276,8 @@ module poc::poc {
         min_reputation: u64,
         requires_double_check: bool,
         deadline: u64,
+        is_competition: bool,
+        voting_deadline: u64,
         ctx: &mut TxContext
     ) {
         let task = Task {
@@ -261,7 +291,13 @@ module poc::poc {
             rubric,
             min_reputation,
             requires_double_check,
-            deadline
+            deadline,
+            is_competition,
+            voting_deadline,
+            top_submission: option::none(),
+            max_votes: 0,
+            voted_users: table::new(ctx),
+            winner_claimed: false
         };
 
         config.total_tasks = config.total_tasks + 1;
@@ -287,7 +323,9 @@ module poc::poc {
         rubric: vector<String>,
         min_reputation: u64,
         requires_double_check: bool,
-        deadline: u64
+        deadline: u64,
+        is_competition: bool,
+        voting_deadline: u64
     ) {
         task.title = title;
         task.description = description;
@@ -298,6 +336,8 @@ module poc::poc {
         task.min_reputation = min_reputation;
         task.requires_double_check = requires_double_check;
         task.deadline = deadline;
+        task.is_competition = is_competition;
+        task.voting_deadline = voting_deadline;
 
         event::emit(TaskUpdated {
             task_id: object::id(task),
@@ -323,8 +363,15 @@ module poc::poc {
             rubric: _,
             min_reputation: _,
             requires_double_check: _,
-            deadline: _
+            deadline: _,
+            is_competition: _,
+            voting_deadline: _,
+            top_submission: _,
+            max_votes: _,
+            voted_users,
+            winner_claimed: _
         } = task;
+        table::drop(voted_users);
         object::delete(id);
 
         event::emit(TaskDeleted { task_id });
@@ -411,7 +458,8 @@ module poc::poc {
             comment: utf8(b""),
             approvers: vector::empty(),
             submitted_at: sui::clock::timestamp_ms(clock),
-            evidence_requests: vector::empty()
+            evidence_requests: vector::empty(),
+            vote_count: 0
         };
 
         config.total_submissions = config.total_submissions + 1;
@@ -423,6 +471,74 @@ module poc::poc {
         });
 
         transfer::share_object(submission);
+    }
+
+    /// Student updates a pending submission before deadline
+    public fun update_submission(
+        profile: &StudentProfile,
+        submission: &mut TaskSubmission,
+        task: &Task,
+        new_proof_url: String,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        assert!(profile.owner == tx_context::sender(ctx), ENotAuthorized);
+        assert!(submission.student_id == object::id(profile), ENotAuthorized);
+        assert!(submission.task_id == object::id(task), ENotAuthorized);
+        assert!(submission.status == STATUS_PENDING, ESubmissionAlreadyApproved);
+        assert!(sui::clock::timestamp_ms(clock) <= task.deadline, ETaskExpired);
+
+        submission.proof_url = new_proof_url;
+        submission.submitted_at = sui::clock::timestamp_ms(clock); // update timestamp if needed
+
+        event::emit(SubmissionUpdated {
+            submission_id: object::id(submission)
+        });
+    }
+
+    /// Student disputes a rejected submission
+    public fun dispute_submission(
+        profile: &StudentProfile,
+        submission: &mut TaskSubmission,
+        reason: String,
+        ctx: &mut TxContext
+    ) {
+        assert!(profile.owner == tx_context::sender(ctx), ENotAuthorized);
+        assert!(submission.student_id == object::id(profile), ENotAuthorized);
+        assert!(submission.status == STATUS_REJECTED, ENotAuthorized); // Can only dispute if rejected
+
+        submission.status = STATUS_DISPUTED;
+        
+        // Append reason to comment, or just emit event. We will append it.
+        let mut new_comment = utf8(b"DISPUTE REASON: ");
+        std::string::append(&mut new_comment, reason);
+        std::string::append(&mut new_comment, utf8(b" | ORIGINAL COMMENT: "));
+        std::string::append(&mut new_comment, submission.comment);
+        
+        submission.comment = new_comment;
+
+        event::emit(SubmissionDisputed {
+            submission_id: object::id(submission),
+            reason
+        });
+    }
+
+    /// Student claims rewards (POC mock)
+    public fun claim_rewards(
+        profile: &mut StudentProfile,
+        ctx: &mut TxContext
+    ) {
+        assert!(profile.owner == tx_context::sender(ctx), ENotAuthorized);
+        let amount = profile.total_points;
+        assert!(amount > 0, EInsufficientFunds); // Can't claim 0
+
+        // Reset points to 0 to simulate claiming
+        profile.total_points = 0;
+
+        event::emit(RewardsClaimed {
+            profile_id: object::id(profile),
+            amount
+        });
     }
 
     // === Verifier Functions ===
@@ -526,6 +642,8 @@ module poc::poc {
         min_reputation: u64,
         requires_double_check: bool,
         deadline: u64,
+        is_competition: bool,
+        voting_deadline: u64,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
@@ -541,7 +659,13 @@ module poc::poc {
             rubric,
             min_reputation,
             requires_double_check,
-            deadline
+            deadline,
+            is_competition,
+            voting_deadline,
+            top_submission: option::none(),
+            max_votes: 0,
+            voted_users: table::new(ctx),
+            winner_claimed: false
         };
 
         config.total_tasks = config.total_tasks + 1;
@@ -790,5 +914,103 @@ module poc::poc {
 
     public fun contribution_count(profile: &StudentProfile): u64 {
         vector::length(&profile.contributions)
+    }
+
+    // === Competition Events ===
+
+    public struct TaskVoted has copy, drop {
+        task_id: ID,
+        submission_id: ID,
+        voter: address
+    }
+
+    public struct CompetitionWinnerDeclared has copy, drop {
+        task_id: ID,
+        winner_id: ID,
+        winner_address: address,
+        votes: u64
+    }
+
+    // === Voting Functions ===
+
+    public fun vote_submission(
+        _profile: &StudentProfile,
+        task: &mut Task,
+        submission: &mut TaskSubmission,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        let now = sui::clock::timestamp_ms(clock);
+
+        assert!(task.is_competition, ENotCompetition);
+        assert!(now > task.deadline, EVotingNotStarted);
+        assert!(now < task.voting_deadline, EVotingFinished);
+        assert!(submission.task_id == object::id(task), ENotAuthorized);
+        assert!(submission.student_address != sender, ECannotVoteOwnSubmission);
+        assert!(!table::contains(&task.voted_users, sender), EAlreadyVoted);
+
+        table::add(&mut task.voted_users, sender, true);
+        submission.vote_count = submission.vote_count + 1;
+
+        if (submission.vote_count > task.max_votes) {
+            task.max_votes = submission.vote_count;
+            task.top_submission = option::some(object::id(submission));
+        };
+
+        event::emit(TaskVoted {
+            task_id: object::id(task),
+            submission_id: object::id(submission),
+            voter: sender
+        });
+    }
+
+    public fun claim_competition_reward(
+        profile: &mut StudentProfile,
+        task: &mut Task,
+        submission: &mut TaskSubmission,
+        config: &mut GlobalConfig,
+        clock: &Clock,
+        _ctx: &mut TxContext
+    ) {
+        let now = sui::clock::timestamp_ms(clock);
+        let submission_id = object::id(submission);
+
+        assert!(task.is_competition, ENotCompetition);
+        assert!(now > task.voting_deadline, EVotingFinished);
+        assert!(!task.winner_claimed, ESubmissionAlreadyApproved);
+        assert!(option::is_some(&task.top_submission), EWinnerNotDetermined);
+        assert!(*option::borrow(&task.top_submission) == submission_id, ENotAuthorized);
+        assert!(submission.student_id == object::id(profile), ENotAuthorized);
+
+        task.winner_claimed = true;
+        submission.status = STATUS_APPROVED;
+
+        let contribution = Contribution {
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            points: task.points,
+            timestamp: now,
+            verified_by: utf8(b"Competition Vote")
+        };
+
+        vector::push_back(&mut profile.contributions, contribution);
+        profile.total_points = profile.total_points + task.points;
+        config.approved_submissions = config.approved_submissions + 1;
+
+        event::emit(CompetitionWinnerDeclared {
+            task_id: object::id(task),
+            winner_id: submission_id,
+            winner_address: submission.student_address,
+            votes: task.max_votes
+        });
+
+        event::emit(SubmissionApproved {
+            submission_id: object::id(submission),
+            task_id: object::id(task),
+            student_id: object::id(profile),
+            points: task.points
+        });
     }
 }

@@ -1,0 +1,60 @@
+# Chi tiết Chức năng Hệ thống ITC
+
+Tài liệu này mô tả chi tiết các chức năng cốt lõi và vai trò của các đối tượng tham gia trong hệ thống **ITC (Incentive Task Coordination)** trên Sui Blockchain.
+
+---
+
+## 👥 Các Vai trò trong Hệ thống (Roles)
+
+### 1. Admin (Quản trị viên Hệ thống)
+Là người nắm giữ `AdminCap`, có quyền hạn cao nhất để duy trì giao thức.
+- **Quản lý Verifier**: Cấp phát hoặc thu hồi quyền xác thực (`VerifierCap`) cho các tổ chức.
+- **Quản lý Task công cộng**: Tạo, chỉnh sửa hoặc xóa các nhiệm vụ do chính hệ thống quản lý.
+- **Giám sát hệ thống**: Điều chỉnh cấu hình toàn cầu (`GlobalConfig`), danh sách kỹ năng, và chính sách thưởng/phạt.
+- **Phê duyệt đặc biệt**: Có khả năng phê duyệt hoặc từ chối bất kỳ minh chứng đóng góp nào trong hệ thống.
+
+### 2. Verifier (Tổ chức / Người xác thực)
+Là các đơn vị (Câu lạc bộ, Trường học, Công ty) nắm giữ `VerifierCap`.
+- **Quản lý Nhiệm vụ**: Tạo và quản lý các nhiệm vụ dành riêng cho tổ chức của mình.
+- **Xác thực đóng góp**: Phê duyệt hoặc từ chối các minh chứng (submissions) mà người dùng gửi lên.
+- **Xác thực trực tiếp**: Ghi nhận đóng góp trực tiếp cho người dùng mà không cần qua bước nộp bài (đối với các hoạt động ngoại tuyến).
+- **Quản lý gói đăng ký**: Mua hoặc gia hạn quyền xác thực bằng đồng SUI theo mô hình Subscription (ví dụ: 30 ngày).
+
+### 3. Student / User (Người thực hiện / Sinh viên)
+Đối tượng trung tâm của hệ thống, thực hiện nhiệm vụ để tích lũy năng lực.
+- **Quản lý Hồ sơ (Soulbound Profile)**: Tạo hồ sơ định danh duy nhất trên chuỗi (không thể chuyển nhượng), lưu trữ lịch sử đóng góp và thành tích.
+- **Tham gia nhiệm vụ**: Tìm kiếm nhiệm vụ trên Task Board, nộp minh chứng (URL/Proof) để được xác thực.
+- **Xây dựng Uy tín (Reputation)**: Tích lũy điểm uy tín qua các nhiệm vụ hoàn thành tốt. Điểm uy tín cao giúp mở khóa các nhiệm vụ cao cấp hơn.
+- **Bình chọn (Voting)**: Tham gia bình chọn cho các bài nộp tốt nhất trong các nhiệm vụ thuộc chế độ "Competition".
+- **Nhận thưởng**: Đổi điểm thưởng tích lũy (Points) lấy các phần thưởng tương ứng.
+
+---
+
+## 🛠 Các Chức năng Chính
+
+### 1. Hệ thống Quản lý Nhiệm vụ (Task Marketplace)
+- **Task Board**: Giao diện trực quan hiển thị danh sách các nhiệm vụ đang hoạt động, lọc theo danh mục, độ khó, hoặc phần thưởng.
+- **Cấu hình Nhiệm vụ**: Cho phép thiết lập thời hạn (deadline), yêu cầu uy tín tối thiểu, và tiêu chí đánh giá (Rubric).
+- **Double-Check Workflow**: Tùy chọn yêu cầu 02 Verifier khác nhau cùng phê duyệt một bài nộp để đảm bảo tính khách quan.
+
+### 2. Cơ chế Xác thực Đóng góp (Proof of Contribution)
+- **Submission Tracking**: Theo dõi trạng thái bài nộp (Đang chờ, Đã duyệt, Bị từ chối, Đang khiếu nại).
+- **Dispute System**: Cho phép người dùng khiếu nại nếu bài nộp bị từ chối không thỏa đáng.
+- **Evidence Requests**: Verifier có thể yêu cầu người dùng bổ sung thêm minh chứng nếu cần thiết.
+
+### 3. Chế độ Thi đấu (Competition Mode)
+- **Peer-to-Peer Voting**: Trong các nhiệm vụ đặc biệt, cộng đồng có quyền bình chọn cho bài nộp xuất sắc nhất.
+- **Hệ thống Deadline kép**: Phân định rõ thời gian nộp bài và thời gian bình chọn.
+- **Tự động xác định người chiến thắng**: Hệ thống tự động chọn ra bài nộp có số phiếu cao nhất để trao thưởng lớn nhất.
+
+### 4. Hệ thống Hồ sơ Năng lực & Uy tín
+- **On-chain Resume**: Mỗi đóng góp được xác thực sẽ trở thành một bản ghi vĩnh viễn trên blockchain gắn liền với địa chỉ ví của người dùng.
+- **Dynamic Reputation**: Điểm uy tín thay đổi dựa trên hành vi (Hoàn thành tốt -> Tăng; Vi phạm/Spam -> Giảm).
+- **Skill Tracking**: Ghi nhận các kỹ năng mà người dùng đạt được qua từng loại nhiệm vụ (Coding, Design, Research...).
+
+### 5. Quản lý Tài chính & Subscription
+- **Verifier Subscription**: Mô hình trả phí định kỳ để duy trì quyền hạn của tổ chức, tạo nguồn thu cho giao thức.
+- **Claim Portal**: Cơ chế chuyển đổi điểm thưởng thành tài sản thực tế hoặc các đặc quyền khác trong hệ sinh thái.
+
+### 6. Trung tâm Thông báo (Notification Center)
+- Cập nhật thời gian thực khi có Task mới, bài nộp được duyệt, hoặc khi sắp đến hạn chót của nhiệm vụ đang tham gia.
