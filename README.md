@@ -21,8 +21,13 @@ Dự án này là một Proof of Concept (POC) cho phép các tổ chức (Verif
 
 ## ✨ Tính năng mới cập nhật (v3.0)
 - **Hệ thống Bình chọn Phi tập trung**: Mỗi bài nộp giờ đây có thể được bình chọn bởi cộng đồng.
-* **Tự động Duyệt bài**: Cơ chế đạt ngưỡng 5 Upvotes để tự động phê duyệt bài nộp mà không cần Admin.
-* **Thưởng Khảo thí (Curator Reward)**: Nhận ngay +5 XP và tăng điểm uy tín khi tham gia bình chọn cho các nội dung chất lượng.
+- **Tự động Duyệt bài**: Cơ chế đạt ngưỡng 5 Upvotes để tự động phê duyệt bài nộp mà không cần Admin.
+- **Thưởng Khảo thí (Curator Reward)**: Nhận ngay +5 XP và tăng điểm uy tín khi tham gia bình chọn cho các nội dung chất lượng.
+
+## 🗺️ Lộ trình phát triển (Future Roadmap)
+- [ ] **Cơ chế Thử thách (Challenge Mechanism)**: Hệ thống chống gian lận cho phép "đặt cược danh tiếng" để tố cáo các minh chứng giả mạo.
+- [ ] **Hệ thống Cấp bậc (Tier System)**: Mở khóa các Quest cao cấp dựa trên tổng điểm XP tích lũy.
+- [ ] **Tích hợp NFT Chứng nhận**: Tự động đúc NFT cho các sinh viên hoàn thành nhiệm vụ xuất sắc.
 
 ## 📋 Chức năng chi tiết
 Vui lòng xem chi tiết tại file: [**chucnang.md**](./chucnang.md)

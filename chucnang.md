@@ -71,3 +71,8 @@ Cơ chế mới giúp phi tập trung hóa việc kiểm duyệt và khuyến kh
     - **+5 XP/Points** cho mỗi lần tham gia đúng.
     - **Tăng điểm Uy tín (Reputation)** giúp hồ sơ cá nhân trở nên giá trị hơn.
     - Cơ chế này giúp ngăn chặn hành vi vote bừa bãi và khuyến khích việc đánh giá nghiêm túc.
+
+### 9. Lộ trình phát triển (Roadmap)
+- **Challenge System**: Triển khai cơ chế đặt cược (staking) để thử thách tính trung thực của bài nộp.
+- **Leaderboard**: Bảng xếp hạng vinh danh các cá nhân đóng góp và người chấm điểm (curators) xuất sắc nhất.
+- **DAO Governance**: Cho phép cộng đồng bình chọn các thay đổi quan trọng của giao thức.
