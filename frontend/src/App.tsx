@@ -574,6 +574,7 @@ export default function App() {
   };
 
   const handleRejectSubmission = async (submissionId: string, reason: string) => {
+    const sub = submissions.find(s => s.id === submissionId);
     const verifierCapId = verifierCaps?.data?.[0]?.data?.objectId;
     
     if (!adminCapId && !verifierCapId) return;
@@ -975,7 +976,7 @@ export default function App() {
                 </h3>
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {globalConfig?.skills?.map((skill, i) => (
+                    {globalConfig?.skills?.map((skill: string, i: number) => (
                       <span key={i} className="px-2 py-1 bg-white/5 border border-white/5 rounded text-[10px] font-bold text-white/60 flex items-center gap-2">
                         {skill}
                         <button className="text-white/20 hover:text-red-500"><X size={10} /></button>
@@ -1071,7 +1072,7 @@ export default function App() {
               onEdit={handleUpdateTask}
               onDelete={handleDeleteTask}
               userReputation={profile?.reputation || 0}
-              userSkills={profile?.contributions?.map(c => c.category) || []}
+              userSkills={profile?.contributions?.map((c: any) => c.category) || []}
               onVote={handleVoteSubmission}
               submissions={submissions}
               onClaimWinner={handleClaimWinner}

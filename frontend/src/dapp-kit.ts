@@ -1,12 +1,14 @@
 import { createNetworkConfig } from '@mysten/dapp-kit';
-import { getFullnodeUrl } from '@mysten/sui/client';
+import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 
 const { networkConfig, useNetworkVariable, useNetworkVariables } = createNetworkConfig({
     testnet: {
-        url: getFullnodeUrl('testnet'),
+        url: getJsonRpcFullnodeUrl('testnet'),
+        network: 'testnet',
     },
     mainnet: {
-        url: getFullnodeUrl('mainnet'),
+        url: getJsonRpcFullnodeUrl('mainnet'),
+        network: 'mainnet',
     },
 });
 

@@ -1,9 +1,8 @@
-import { useCurrentAccount, useCurrentWallet, useCurrentNetwork } from '@mysten/dapp-kit-react';
+import { useCurrentAccount, useCurrentWallet } from '@mysten/dapp-kit';
 
 export function WalletStatus() {
     const account = useCurrentAccount();
-    const wallet = useCurrentWallet();
-    const network = useCurrentNetwork();
+    const { currentWallet } = useCurrentWallet();
 
     if (!account) {
         return <p>Connect your wallet to get started</p>;
@@ -11,9 +10,8 @@ export function WalletStatus() {
 
     return (
         <div>
-            <p>Wallet: {wallet?.name}</p>
+            <p>Wallet: {currentWallet?.name}</p>
             <p>Address: {account.address}</p>
-            <p>Network: {network}</p>
         </div>
     );
 }
