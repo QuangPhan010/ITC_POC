@@ -14,6 +14,7 @@ interface Submission {
   requiresDoubleCheck?: boolean;
   rubric?: string[];
   submittedAt?: number;
+  voteCount?: number;
 }
 
 interface SubmissionListProps {
@@ -22,9 +23,10 @@ interface SubmissionListProps {
   onReject: (submissionId: string, reason: string) => Promise<void>;
   onRequestEvidence?: (submissionId: string, message: string) => Promise<void>;
   onViewProfile?: (studentId: string) => void;
+  onCommunityFinalize?: (submissionId: string) => Promise<void>;
 }
 
-export function SubmissionList({ submissions, onApprove, onReject, onRequestEvidence, onViewProfile }: SubmissionListProps) {
+export function SubmissionList({ submissions, onApprove, onReject, onRequestEvidence, onViewProfile, onCommunityFinalize }: SubmissionListProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   // Sort by urgency (requires double check first, then by date)
@@ -142,6 +144,17 @@ export function SubmissionList({ submissions, onApprove, onReject, onRequestEvid
                       ))}
                     </div>
                   </div>
+
+                  {sub.status === 0 && (sub.voteCount || 0) >= 5 && (
+                    <button
+                      disabled={!!loadingId}
+                      onClick={() => handleAction(sub.id, () => onCommunityFinalize!(sub.id))}
+                      className="w-full bg-green-500/20 text-green-500 font-black py-2.5 rounded-xl flex items-center justify-center gap-2 hover:bg-green-500/30 transition-all border border-green-500/20 mb-2"
+                    >
+                      {loadingId === sub.id ? <Loader2 size={18} className="animate-spin" /> : <ClipboardCheck size={18} />}
+                      Community Finalize ({sub.voteCount} Votes)
+                    </button>
+                  )}
 
                   <button
                     disabled={!!loadingId}

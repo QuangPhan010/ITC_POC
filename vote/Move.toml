@@ -1,0 +1,11 @@
+[package]
+name = "poc"
+edition = "2024.beta" # Use 2024.beta or 2024
+published-at = "0x0"
+
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+
+[addresses]
+itc_poc_v3 = "0x0"

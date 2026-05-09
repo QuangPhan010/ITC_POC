@@ -484,10 +484,66 @@ export default function App() {
     try {
       await signAndExecuteAsync({ transaction: tx });
       alert("Vote cast successfully!");
-      setTimeout(() => refetchSubmissions(), 2000);
+      setTimeout(() => {
+        refetchSubmissions();
+        refetchTasks();
+      }, 2000);
     } catch (error: any) {
       console.error(error);
       alert(`Voting failed: ${error.message}`);
+    }
+  };
+
+  const handleCommunityFinalize = async (submissionId: string) => {
+    const sub = submissions.find(s => s.id === submissionId);
+    if (!sub || !globalConfigId) return;
+    
+    const studentProfileId = sub.studentId;
+
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::community_finalize`,
+      arguments: [
+        tx.object(submissionId),
+        tx.object(studentProfileId),
+        tx.object(sub.taskId),
+        tx.object(globalConfigId),
+        tx.object(CLOCK_ID),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Submission finalized by community!");
+      setTimeout(() => {
+        refetchSubmissions();
+        refetchProfile();
+      }, 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Finalization failed: ${error.message}`);
+    }
+  };
+
+  const handleClaimCuratorReward = async (submissionId: string) => {
+    if (!profile) return;
+    
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${UPGRADED_PACKAGE_ID}::${MODULE_NAME}::claim_curator_reward`,
+      arguments: [
+        tx.object(profile.id),
+        tx.object(submissionId),
+      ],
+    });
+
+    try {
+      await signAndExecuteAsync({ transaction: tx });
+      alert("Curator reward (+5 XP) claimed successfully!");
+      setTimeout(() => refetchProfile(), 2000);
+    } catch (error: any) {
+      console.error(error);
+      alert(`Claim failed: ${error.message}`);
     }
   };
 
@@ -1030,6 +1086,7 @@ export default function App() {
                       submissions={submissions} 
                       onApprove={handleApproveSubmission}
                       onReject={handleRejectSubmission}
+                      onCommunityFinalize={handleCommunityFinalize}
                       onViewProfile={setViewingStudentId}
                     />
                   </>
@@ -1076,6 +1133,8 @@ export default function App() {
               onVote={handleVoteSubmission}
               submissions={submissions}
               onClaimWinner={handleClaimWinner}
+              onCommunityFinalize={handleCommunityFinalize}
+              onClaimCuratorReward={handleClaimCuratorReward}
               onViewProfile={setViewingStudentId}
             />
           </div>

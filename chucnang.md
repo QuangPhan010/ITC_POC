@@ -62,3 +62,17 @@ Là các đơn vị (Câu lạc bộ, Trường học, Công ty) nắm giữ `Ve
 ### 7. Khám phá & Giám sát Cộng đồng
 - **Xem Profile người dùng**: Người dùng có thể nhấn vào địa chỉ/ID của sinh viên khác để xem chi tiết hồ sơ năng lực, uy tín và lịch sử đóng góp.
 - **Hệ thống Báo cáo (Reporting)**: Bất kỳ người dùng nào cũng có thể báo cáo hành vi bất thường của người khác. Báo cáo được ghi lại on-chain để Admin kiểm tra và xử lý.
+
+### 8. Hệ thống Quản trị Cộng đồng (Community Curation) - MỚI 🌟
+Cơ chế mới giúp phi tập trung hóa việc kiểm duyệt và khuyến khích cộng đồng cùng tham gia xây dựng hệ sinh thái chất lượng.
+- **Upvote theo bài nộp**: Cho phép cộng đồng bình chọn cho từng bài nộp cá nhân để ghi nhận chất lượng. Mỗi ví chỉ được bình chọn 1 lần cho mỗi bài nộp.
+- **Tự động Duyệt bài (Community Finalize)**: Khi một bài nộp đạt được sự đồng thuận từ cộng đồng (đạt ngưỡng 5 Upvotes), chức năng tự động duyệt bài sẽ mở ra. Bất kỳ ai cũng có thể nhấn nút để phê duyệt bài nộp đó mà không cần Admin hay Verifier.
+- **Thưởng Khảo thí (Curator Rewards)**: Những người tham gia bình chọn cho các bài nộp chất lượng (các bài sau đó được duyệt) sẽ có quyền nhận thưởng:
+    - **+5 XP/Points** cho mỗi lần tham gia đúng.
+    - **Tăng điểm Uy tín (Reputation)** giúp hồ sơ cá nhân trở nên giá trị hơn.
+    - Cơ chế này giúp ngăn chặn hành vi vote bừa bãi và khuyến khích việc đánh giá nghiêm túc.
+
+### 9. Lộ trình phát triển (Roadmap)
+- **Challenge System**: Triển khai cơ chế đặt cược (staking) để thử thách tính trung thực của bài nộp.
+- **Leaderboard**: Bảng xếp hạng vinh danh các cá nhân đóng góp và người chấm điểm (curators) xuất sắc nhất.
+- **DAO Governance**: Cho phép cộng đồng bình chọn các thay đổi quan trọng của giao thức.
