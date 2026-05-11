@@ -83,11 +83,23 @@
     color: white;
     outline: none;
     transition: all 0.2s ease;
+    color-scheme: dark;
+  }
+
+  select option {
+    background-color: #17171a;
+    color: white;
   }
 
   .input-field:focus {
     border-color: rgba(59, 130, 246, 0.5);
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  }
+
+  .glass {
+    background-color: rgba(10, 10, 12, 0.85) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 }
 
