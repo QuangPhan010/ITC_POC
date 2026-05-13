@@ -847,91 +847,90 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navbar */}
-      <nav className="glass sticky top-0 z-40 border-b border-white/5 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
-            <Sparkles className="text-white" size={24} />
-          </div>
-          <div>
-            <h1 className="text-xl font-black tracking-tight text-white leading-none">POC Protocol</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-none">Proof of Contribution</p>
-              <span className="text-[8px] text-white/20 font-mono bg-white/5 px-1 rounded">v:{PACKAGE_ID.slice(0, 6)}...</span>
+      <nav className="glass sticky top-0 z-40 border-b border-white/5 px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+              <Sparkles className="text-white" size={18} />
             </div>
+            <div>
+              <h1 className="text-base sm:text-xl font-black tracking-tight text-white leading-none">ITC POC</h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button 
+              onClick={() => {
+                refetchProfile();
+                refetchTasks();
+                refetchSubmissions();
+                refetchAdminCaps();
+                refetchVerifierCaps();
+              }}
+              className="p-2 text-white/40 hover:text-white/60 transition-colors"
+              title="Refresh Data"
+            >
+              <RefreshCw size={16} />
+            </button>
+            <NotificationCenter tasks={tasks} submissions={submissions.filter(s => s.studentAddress === account?.address)} />
+            <ConnectButton />
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {account && (
-            <div className="hidden md:flex bg-white/5 rounded-lg p-1 border border-white/5">
+        {account && (
+          <div className="mt-3 flex overflow-x-auto no-scrollbar bg-white/5 rounded-xl p-1 border border-white/5">
+            <button
+              onClick={() => setActiveTab("profile")}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === "profile" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setActiveTab("tasks")}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === "tasks" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Quests
+            </button>
+            <button
+              onClick={() => setActiveTab("workspace")}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === "workspace" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Workspace
+            </button>
+            <button
+              onClick={() => setActiveTab("rewards")}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === "rewards" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Rewards
+            </button>
+            <button
+              onClick={() => setActiveTab("verifier")}
+              className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                activeTab === "verifier" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Org
+            </button>
+            {hasAdminCap && (
               <button
-                onClick={() => setActiveTab("profile")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "profile" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                onClick={() => setActiveTab("admin")}
+                className={`flex-1 px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                  activeTab === "admin" ? "bg-amber-500/20 text-amber-500 shadow-sm" : "text-white/40 hover:text-white/60"
                 }`}
               >
-                Profile
+                Admin
               </button>
-              <button
-                onClick={() => setActiveTab("tasks")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "tasks" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                Quests
-              </button>
-              <button
-                onClick={() => setActiveTab("workspace")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "workspace" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                My Workspace
-              </button>
-              <button
-                onClick={() => setActiveTab("rewards")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "rewards" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                Rewards
-              </button>
-              <button
-                onClick={() => setActiveTab("verifier")}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  activeTab === "verifier" ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
-                }`}
-              >
-                Organization
-              </button>
-              {hasAdminCap && (
-                <button
-                  onClick={() => setActiveTab("admin")}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    activeTab === "admin" ? "bg-amber-500/20 text-amber-500 shadow-sm" : "text-white/40 hover:text-white/60"
-                  }`}
-                >
-                  Admin
-                </button>
-              )}
-            </div>
-          )}
-          <button 
-            onClick={() => {
-              refetchProfile();
-              refetchTasks();
-              refetchSubmissions();
-              refetchAdminCaps();
-              refetchVerifierCaps();
-            }}
-            className="p-2 text-white/40 hover:text-white/60 transition-colors"
-            title="Refresh Data"
-          >
-            <RefreshCw size={18} />
-          </button>
-          <NotificationCenter tasks={tasks} submissions={submissions.filter(s => s.studentAddress === account?.address)} />
-          <ConnectButton />
-        </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Main Content */}

@@ -503,8 +503,8 @@ export function TaskBoard({
                             {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
                               <button
                                 onClick={() => {
-                                  if (!isAdmin && userReputation === 0) {
-                                  alert("Bạn hãy nhấn 'Create Profile' ở phía trên trang web để có thể tham gia bình chọn nhé!");
+                                  if (userReputation === 0) {
+                                    alert("Bạn cần nhấn 'Create Profile' ở phía trên trang web để tạo hồ sơ trước khi tham gia bình chọn (kể cả Admin)!");
                                     return;
                                   }
                                   setViewingSubmissionsTaskId(task.id);
@@ -547,7 +547,7 @@ export function TaskBoard({
       {/* Viewing Submissions Modal */}
       {viewingSubmissionsTaskId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="glass-card w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl">
+          <div className="glass-card w-full max-w-2xl h-[95vh] sm:h-[80vh] overflow-hidden flex flex-col border border-white/10 shadow-2xl">
             <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
               <div>
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-2">
@@ -569,7 +569,7 @@ export function TaskBoard({
                   .filter(s => s.taskId === viewingSubmissionsTaskId)
                   .sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0))
                   .map((sub, idx) => (
-                    <div key={sub.id} className="glass-card p-4 flex items-center justify-between border border-white/5 hover:bg-white/5 transition-all">
+                    <div key={sub.id} className="glass-card p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-white/5 hover:bg-white/5 transition-all">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/20 font-black">
                           #{idx + 1}
@@ -590,7 +590,7 @@ export function TaskBoard({
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 justify-end">
                         {sub.status === 0 && sub.voteCount >= 5 && (
                           <button
                             onClick={() => onCommunityFinalize?.(sub.id)}
