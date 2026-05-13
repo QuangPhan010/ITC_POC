@@ -279,25 +279,63 @@ export function TaskBoard({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Deadline</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Deadline</label>
+                          <div className="flex gap-1">
+                            <button type="button" onClick={() => {
+                              const d = new Date();
+                              d.setHours(d.getHours() + 1);
+                              setEditData({ ...editData, deadline: d.getTime().toString() });
+                            }} className="text-[7px] font-bold text-primary/60 hover:text-primary transition-colors">1h</button>
+                            <button type="button" onClick={() => {
+                              const d = new Date();
+                              d.setHours(d.getHours() + 24);
+                              setEditData({ ...editData, deadline: d.getTime().toString() });
+                            }} className="text-[7px] font-bold text-primary/60 hover:text-primary transition-colors">24h</button>
+                          </div>
+                        </div>
                         <input
                           type="datetime-local"
                           className="input-field w-full text-xs"
                           value={(() => {
                             const d = Number(editData.deadline);
-                            return (d > 0 && !isNaN(d)) ? new Date(d).toISOString().slice(0, 16) : "";
+                            if (d > 0 && !isNaN(d)) {
+                              const date = new Date(d);
+                              const offset = date.getTimezoneOffset() * 60000;
+                              return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+                            }
+                            return "";
                           })()}
                           onChange={(e) => setEditData({ ...editData, deadline: new Date(e.target.value).getTime().toString() })}
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Voting Deadline</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Voting Deadline</label>
+                          <div className="flex gap-1">
+                            <button type="button" onClick={() => {
+                              const d = new Date(Number(editData.deadline) || Date.now());
+                              d.setHours(d.getHours() + 1);
+                              setEditData({ ...editData, votingDeadline: d.getTime().toString() });
+                            }} className="text-[7px] font-bold text-purple-500/60 hover:text-purple-500 transition-colors">+1h</button>
+                            <button type="button" onClick={() => {
+                              const d = new Date(Number(editData.deadline) || Date.now());
+                              d.setHours(d.getHours() + 24);
+                              setEditData({ ...editData, votingDeadline: d.getTime().toString() });
+                            }} className="text-[7px] font-bold text-purple-500/60 hover:text-purple-500 transition-colors">+24h</button>
+                          </div>
+                        </div>
                         <input
                           type="datetime-local"
                           className="input-field w-full text-xs"
                           value={(() => {
                             const vd = Number(editData.votingDeadline);
-                            return (vd > 0 && !isNaN(vd)) ? new Date(vd).toISOString().slice(0, 16) : "";
+                            if (vd > 0 && !isNaN(vd)) {
+                              const date = new Date(vd);
+                              const offset = date.getTimezoneOffset() * 60000;
+                              return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+                            }
+                            return "";
                           })()}
                           onChange={(e) => setEditData({ ...editData, votingDeadline: new Date(e.target.value).getTime().toString() })}
                         />

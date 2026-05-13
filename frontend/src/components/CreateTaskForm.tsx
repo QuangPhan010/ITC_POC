@@ -27,14 +27,16 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
     deadline: (() => {
       const d = new Date();
       d.setDate(d.getDate() + 7);
-      return d.toISOString().slice(0, 16);
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
     })(),
     isCompetition: false,
     votingDeadline: (() => {
       const d = new Date();
-      d.setDate(d.getDate() + 10); // Default voting 3 days after deadline
-      return d.toISOString().slice(0, 16);
-    })()
+      d.setDate(d.getDate() + 8);
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+    })(),
   });
   const [rubricItems, setRubricItems] = useState<string[]>([""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
