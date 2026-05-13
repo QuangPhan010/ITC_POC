@@ -448,61 +448,65 @@ export function TaskBoard({
                         BY <span className="text-white/60">{task.creator}</span>
                       </div>
   
-                      {isAdmin ? (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(task)}
-                            className="p-2.5 rounded-xl border border-white/5 bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all shadow-sm"
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteTask(task.id)}
-                            disabled={busyTaskId === task.id}
-                            className="p-2.5 rounded-xl border border-red-500/10 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-20 shadow-sm"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      {(isAdmin || !isVerifier) && (
-                        <div className="flex flex-col items-end gap-2">
-                          {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
+                      <div className="flex items-center gap-3 shrink-0">
+                        {isAdmin && (
+                          <div className="flex items-center gap-2 pr-3 border-r border-white/5">
                             <button
-                              onClick={() => {
-                                if (!isAdmin && userReputation === 0) {
-                                  alert("Bạn cần tạo hồ sơ (Profile) trước khi tham gia bình chọn!");
-                                  return;
-                                }
-                                setViewingSubmissionsTaskId(task.id);
-                              }}
-                              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2"
+                              type="button"
+                              onClick={() => startEdit(task)}
+                              className="p-2.5 rounded-xl border border-white/5 bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all shadow-sm"
                             >
-                              <Trophy size={14} /> Vote for Participants
+                              <Pencil size={16} />
                             </button>
-                          )}
-                          
-                          {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winner_claimed && (
                             <button
-                              onClick={() => onClaimWinner?.(task.id, task.topSubmission!)}
-                              className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2"
+                              type="button"
+                              onClick={() => deleteTask(task.id)}
+                              disabled={busyTaskId === task.id}
+                              className="p-2.5 rounded-xl border border-red-500/10 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-20 shadow-sm"
                             >
-                              <Trophy size={14} /> Claim Winner Reward
+                              <Trash2 size={16} />
                             </button>
-                          )}
+                          </div>
+                        )}
 
-                          {!isAdmin && (
-                            <button
-                              onClick={() => onComplete(task.id)}
-                              disabled={!meetsReputation || (!!task.deadline && Date.now() > Number(task.deadline))}
-                              className={`text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all p-2 -mr-2 rounded-lg ${meetsReputation && (!task.deadline || Date.now() <= Number(task.deadline)) ? "text-primary hover:gap-4 hover:text-accent hover:bg-primary/5" : "text-white/10 cursor-not-allowed grayscale"}`}
-                            >
-                              {meetsReputation ? (task.deadline && Date.now() > Number(task.deadline) ? "Expired" : "Accept Quest") : "Locked"} <ChevronRight size={18} />
-                            </button>
-                          )}
-                        </div>
-                      )}             )}
+                        {(isAdmin || !isVerifier) && (
+                          <div className="flex flex-col items-end gap-2">
+                            {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
+                              <button
+                                onClick={() => {
+                                  if (!isAdmin && userReputation === 0) {
+                                    alert("Bạn cần tạo hồ sơ (Profile) trước khi tham gia bình chọn!");
+                                    return;
+                                  }
+                                  setViewingSubmissionsTaskId(task.id);
+                                }}
+                                className="px-4 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2"
+                              >
+                                <Trophy size={14} /> Vote for Participants
+                              </button>
+                            )}
+                            
+                            {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winner_claimed && (
+                              <button
+                                onClick={() => onClaimWinner?.(task.id, task.topSubmission!)}
+                                className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2"
+                              >
+                                <Trophy size={14} /> Claim Winner Reward
+                              </button>
+                            )}
+
+                            {!isAdmin && (
+                              <button
+                                onClick={() => onComplete(task.id)}
+                                disabled={!meetsReputation || (!!task.deadline && Date.now() > Number(task.deadline))}
+                                className={`text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all p-2 -mr-2 rounded-lg ${meetsReputation && (!task.deadline || Date.now() <= Number(task.deadline)) ? "text-primary hover:gap-4 hover:text-accent hover:bg-primary/5" : "text-white/10 cursor-not-allowed grayscale"}`}
+                              >
+                                {meetsReputation ? (task.deadline && Date.now() > Number(task.deadline) ? "Expired" : "Accept Quest") : "Locked"} <ChevronRight size={18} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
