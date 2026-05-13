@@ -223,6 +223,14 @@ export function TaskBoard({
             const isRecommended = userSkills.includes(task.category);
             const meetsReputation = userReputation >= (task.minReputation || 0);
             const isWatched = watchlist.includes(task.id);
+            
+            // Debugging time logic
+            console.log(`Task: ${task.title}`);
+            console.log(`- Now: ${Date.now()}`);
+            console.log(`- Deadline: ${task.deadline} (${new Date(Number(task.deadline)).toLocaleString()})`);
+            console.log(`- VotingDeadline: ${task.votingDeadline} (${new Date(Number(task.votingDeadline)).toLocaleString()})`);
+            console.log(`- isCompetition: ${task.isCompetition}`);
+            console.log(`- Phase condition: ${Date.now() > Number(task.deadline)} && ${Date.now() < Number(task.votingDeadline)}`);
 
             return (
               <div key={task.id} className={`glass-card flex flex-col justify-between group border border-white/5 hover:border-primary/20 transition-all ${!meetsReputation && !isAdmin ? "opacity-60 grayscale-[0.5]" : ""}`}>
@@ -458,12 +466,12 @@ export function TaskBoard({
                             <Trash2 size={16} />
                           </button>
                         </div>
-                      ) : !isVerifier && (
+                      {(isAdmin || !isVerifier) && (
                         <div className="flex flex-col items-end gap-2">
                           {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
                             <button
                               onClick={() => {
-                                if (userReputation === 0) {
+                                if (!isAdmin && userReputation === 0) {
                                   alert("Bạn cần tạo hồ sơ (Profile) trước khi tham gia bình chọn!");
                                   return;
                                 }
@@ -475,7 +483,7 @@ export function TaskBoard({
                             </button>
                           )}
                           
-                          {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winnerClaimed && (
+                          {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winner_claimed && (
                             <button
                               onClick={() => onClaimWinner?.(task.id, task.topSubmission!)}
                               className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2"
@@ -484,15 +492,17 @@ export function TaskBoard({
                             </button>
                           )}
 
-                          <button
-                            onClick={() => onComplete(task.id)}
-                            disabled={!meetsReputation || (!!task.deadline && Date.now() > Number(task.deadline))}
-                            className={`text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all p-2 -mr-2 rounded-lg ${meetsReputation && (!task.deadline || Date.now() <= Number(task.deadline)) ? "text-primary hover:gap-4 hover:text-accent hover:bg-primary/5" : "text-white/10 cursor-not-allowed grayscale"}`}
-                          >
-                            {meetsReputation ? (task.deadline && Date.now() > Number(task.deadline) ? "Expired" : "Accept Quest") : "Locked"} <ChevronRight size={18} />
-                          </button>
+                          {!isAdmin && (
+                            <button
+                              onClick={() => onComplete(task.id)}
+                              disabled={!meetsReputation || (!!task.deadline && Date.now() > Number(task.deadline))}
+                              className={`text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all p-2 -mr-2 rounded-lg ${meetsReputation && (!task.deadline || Date.now() <= Number(task.deadline)) ? "text-primary hover:gap-4 hover:text-accent hover:bg-primary/5" : "text-white/10 cursor-not-allowed grayscale"}`}
+                            >
+                              {meetsReputation ? (task.deadline && Date.now() > Number(task.deadline) ? "Expired" : "Accept Quest") : "Locked"} <ChevronRight size={18} />
+                            </button>
+                          )}
                         </div>
-                      )}
+                      )}             )}
                     </div>
                   </>
                 )}
