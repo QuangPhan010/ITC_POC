@@ -283,7 +283,10 @@ export function TaskBoard({
                         <input
                           type="datetime-local"
                           className="input-field w-full text-xs"
-                          value={editData.deadline ? new Date(Number(editData.deadline)).toISOString().slice(0, 16) : ""}
+                          value={(() => {
+                            const d = Number(editData.deadline);
+                            return (d > 0 && !isNaN(d)) ? new Date(d).toISOString().slice(0, 16) : "";
+                          })()}
                           onChange={(e) => setEditData({ ...editData, deadline: new Date(e.target.value).getTime().toString() })}
                         />
                       </div>
@@ -292,7 +295,10 @@ export function TaskBoard({
                         <input
                           type="datetime-local"
                           className="input-field w-full text-xs"
-                          value={editData.votingDeadline ? new Date(Number(editData.votingDeadline)).toISOString().slice(0, 16) : ""}
+                          value={(() => {
+                            const vd = Number(editData.votingDeadline);
+                            return (vd > 0 && !isNaN(vd)) ? new Date(vd).toISOString().slice(0, 16) : "";
+                          })()}
                           onChange={(e) => setEditData({ ...editData, votingDeadline: new Date(e.target.value).getTime().toString() })}
                         />
                       </div>
@@ -393,11 +399,15 @@ export function TaskBoard({
                           Date.now() > Number(task.deadline) ? "text-red-500" : "text-white/40"
                         }`}>
                           <Clock size={12} />
-                          {Date.now() > Number(task.deadline) ? (
-                            <>Submission Closed: {new Date(Number(task.deadline)).toLocaleString()}</>
-                          ) : (
-                            <>Submission Ends: {new Date(Number(task.deadline)).toLocaleString()}</>
-                          )}
+                          {(() => {
+                            const d = Number(task.deadline);
+                            if (isNaN(d) || d === 0) return <>No Deadline</>;
+                            return Date.now() > d ? (
+                              <>Submission Closed: {new Date(d).toLocaleString()}</>
+                            ) : (
+                              <>Submission Ends: {new Date(d).toLocaleString()}</>
+                            );
+                          })()}
                         </div>
                       )}
 
@@ -406,13 +416,19 @@ export function TaskBoard({
                           Date.now() > Number(task.votingDeadline) ? "text-red-500/60" : "text-amber-500"
                         }`}>
                           <Star size={12} className={Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) ? "animate-pulse" : ""} />
-                          {Date.now() < Number(task.deadline) ? (
-                            <>Voting Phase: Pending</>
-                          ) : Date.now() > Number(task.votingDeadline) ? (
-                            <>Voting Closed: {new Date(Number(task.votingDeadline)).toLocaleString()}</>
-                          ) : (
-                            <>Voting Ends: {new Date(Number(task.votingDeadline)).toLocaleString()}</>
-                          )}
+                          {(() => {
+                            const d = Number(task.deadline);
+                            const vd = Number(task.votingDeadline);
+                            if (isNaN(vd) || vd === 0) return <>Voting: Not Set</>;
+                            
+                            return Date.now() < d ? (
+                              <>Voting Phase: Pending</>
+                            ) : Date.now() > vd ? (
+                              <>Voting Closed: {new Date(vd).toLocaleString()}</>
+                            ) : (
+                              <>Voting Ends: {new Date(vd).toLocaleString()}</>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
