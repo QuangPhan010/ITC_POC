@@ -120,7 +120,21 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Quest Deadline (Submission)</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Quest Deadline</label>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => {
+                  const d = new Date();
+                  d.setHours(d.getHours() + 1);
+                  setFormData({ ...formData, deadline: d.toISOString().slice(0, 16) });
+                }} className="text-[9px] font-bold text-primary/60 hover:text-primary transition-colors">1h</button>
+                <button type="button" onClick={() => {
+                  const d = new Date();
+                  d.setHours(d.getHours() + 24);
+                  setFormData({ ...formData, deadline: d.toISOString().slice(0, 16) });
+                }} className="text-[9px] font-bold text-primary/60 hover:text-primary transition-colors">24h</button>
+              </div>
+            </div>
             <input
               type="datetime-local"
               required
@@ -142,13 +156,30 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
               </button>
             </div>
             {formData.isCompetition && (
-              <input
-                type="datetime-local"
-                required
-                className="input-field w-full text-sm py-3 animate-in fade-in slide-in-from-top-2 duration-300"
-                value={formData.votingDeadline}
-                onChange={(e) => setFormData({ ...formData, votingDeadline: e.target.value })}
-              />
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-white/20 uppercase tracking-widest ml-1">Voting Deadline</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => {
+                      const d = new Date(formData.deadline);
+                      d.setHours(d.getHours() + 1);
+                      setFormData({ ...formData, votingDeadline: d.toISOString().slice(0, 16) });
+                    }} className="text-[9px] font-bold text-purple-500/60 hover:text-purple-500 transition-colors">+1h</button>
+                    <button type="button" onClick={() => {
+                      const d = new Date(formData.deadline);
+                      d.setHours(d.getHours() + 24);
+                      setFormData({ ...formData, votingDeadline: d.toISOString().slice(0, 16) });
+                    }} className="text-[9px] font-bold text-purple-500/60 hover:text-purple-500 transition-colors">+24h</button>
+                  </div>
+                </div>
+                <input
+                  type="datetime-local"
+                  required
+                  className="input-field w-full text-sm py-3"
+                  value={formData.votingDeadline}
+                  onChange={(e) => setFormData({ ...formData, votingDeadline: e.target.value })}
+                />
+              </div>
             )}
           </div>
         </div>

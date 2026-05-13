@@ -394,41 +394,43 @@ export function TaskBoard({
                         </div>
                       )}
   
-                      {task.deadline && (
-                        <div className={`text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-2 ${
-                          Date.now() > Number(task.deadline) ? "text-red-500" : "text-white/40"
-                        }`}>
-                          <Clock size={12} />
-                          {(() => {
-                            const d = Number(task.deadline);
-                            if (isNaN(d) || d === 0) return <>No Deadline</>;
-                            return Date.now() > d ? (
-                              <>Submission Closed: {new Date(d).toLocaleString()}</>
-                            ) : (
-                              <>Submission Ends: {new Date(d).toLocaleString()}</>
-                            );
-                          })()}
-                        </div>
-                      )}
-
-                      {task.isCompetition && task.votingDeadline && (
-                        <div className={`text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-2 ${
-                          Date.now() > Number(task.votingDeadline) ? "text-red-500/60" : "text-amber-500"
-                        }`}>
-                          <Star size={12} className={Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) ? "animate-pulse" : ""} />
-                          {(() => {
-                            const d = Number(task.deadline);
-                            const vd = Number(task.votingDeadline);
-                            if (isNaN(vd) || vd === 0) return <>Voting: Not Set</>;
+                      {task.isCompetition && (
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black uppercase text-white/40">Current Phase</span>
+                            {(() => {
+                              const now = Date.now();
+                              const d = Number(task.deadline);
+                              const vd = Number(task.votingDeadline);
+                              if (now < d) return <span className="text-[9px] font-black uppercase text-primary bg-primary/10 px-2 py-0.5 rounded">Submission</span>;
+                              if (now < vd) return <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded animate-pulse">Voting Live</span>;
+                              return <span className="text-[9px] font-black uppercase text-white/20 bg-white/5 px-2 py-0.5 rounded">Closed</span>;
+                            })()}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <div className={`text-[9px] font-black uppercase tracking-tight flex items-center gap-2 ${
+                              Date.now() > Number(task.deadline) ? "text-white/20" : "text-white/60"
+                            }`}>
+                              <Clock size={10} />
+                              {(() => {
+                                const d = Number(task.deadline);
+                                if (isNaN(d) || d === 0) return "No Deadline";
+                                return `Deadline: ${new Date(d).toLocaleString()}`;
+                              })()}
+                            </div>
                             
-                            return Date.now() < d ? (
-                              <>Voting Phase: Pending</>
-                            ) : Date.now() > vd ? (
-                              <>Voting Closed: {new Date(vd).toLocaleString()}</>
-                            ) : (
-                              <>Voting Ends: {new Date(vd).toLocaleString()}</>
-                            );
-                          })()}
+                            <div className={`text-[9px] font-black uppercase tracking-tight flex items-center gap-2 ${
+                              Date.now() > Number(task.votingDeadline) ? "text-white/20" : "text-amber-500"
+                            }`}>
+                              <Star size={10} />
+                              {(() => {
+                                const vd = Number(task.votingDeadline);
+                                if (isNaN(vd) || vd === 0) return "Voting: Not Set";
+                                return `Voting Ends: ${new Date(vd).toLocaleString()}`;
+                              })()}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -460,8 +462,14 @@ export function TaskBoard({
                         <div className="flex flex-col items-end gap-2">
                           {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
                             <button
-                              onClick={() => setViewingSubmissionsTaskId(task.id)}
-                              className="px-4 py-2 bg-amber-500/10 text-amber-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-amber-500/20 hover:bg-amber-500/20 transition-all flex items-center gap-2"
+                              onClick={() => {
+                                if (userReputation === 0) {
+                                  alert("Bạn cần tạo hồ sơ (Profile) trước khi tham gia bình chọn!");
+                                  return;
+                                }
+                                setViewingSubmissionsTaskId(task.id);
+                              }}
+                              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2"
                             >
                               <Trophy size={14} /> Vote for Participants
                             </button>
