@@ -99,7 +99,8 @@ export default function App() {
   );
 
   console.log("Admin Cap Query Result:", adminCaps);
-  console.log("Looking for:", `${PACKAGE_ID}::${MODULE_NAME}::AdminCap`);
+  console.log("Looking for AdminCap:", `${PACKAGE_ID}::${MODULE_NAME}::AdminCap`);
+  console.log("Current PACKAGE_ID:", PACKAGE_ID);
 
   // Query for TaskCreated events to get all quest IDs
   const { data: taskEvents, refetch: refetchEvents } = useSuiClientQuery(
@@ -120,6 +121,10 @@ export default function App() {
     },
     { enabled: taskIds.length > 0 }
   );
+
+  console.log("Task Events Data:", taskEvents?.data);
+  console.log("Extracted Task IDs:", taskIds);
+  console.log("Task Objects Data:", taskObjects);
   
   const { data: submissionEvents, refetch: refetchSubmissionEvents } = useSuiClientQuery(
     "queryEvents",
@@ -165,8 +170,9 @@ export default function App() {
     { enabled: submissionIds.length > 0 }
   );
 
-  console.log("Found task IDs:", taskIds);
-  console.log("Task objects result:", taskObjects);
+  console.log("Submission Events Data:", submissionEvents?.data);
+  console.log("Extracted Submission IDs:", submissionIds);
+  console.log("Submission Objects Data:", submissionObjects);
 
   const profile = useMemo(() => {
     const obj = profileObject?.data;
