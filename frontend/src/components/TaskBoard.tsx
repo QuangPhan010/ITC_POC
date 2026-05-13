@@ -499,13 +499,12 @@ export function TaskBoard({
                           </div>
                         )}
 
-                        {(isAdmin || !isVerifier) && (
-                          <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-end gap-2">
                             {task.isCompetition && Date.now() > Number(task.deadline) && Date.now() < Number(task.votingDeadline) && (
                               <button
                                 onClick={() => {
                                   if (!isAdmin && userReputation === 0) {
-                                    alert("Bạn cần tạo hồ sơ (Profile) trước khi tham gia bình chọn!");
+                                  alert("Bạn hãy nhấn 'Create Profile' ở phía trên trang web để có thể tham gia bình chọn nhé!");
                                     return;
                                   }
                                   setViewingSubmissionsTaskId(task.id);
@@ -535,7 +534,6 @@ export function TaskBoard({
                               </button>
                             )}
                           </div>
-                        )}
                       </div>
                     </div>
                   </>
