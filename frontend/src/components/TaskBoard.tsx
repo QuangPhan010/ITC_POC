@@ -223,14 +223,6 @@ export function TaskBoard({
             const isRecommended = userSkills.includes(task.category);
             const meetsReputation = userReputation >= (task.minReputation || 0);
             const isWatched = watchlist.includes(task.id);
-            
-            // Debugging time logic
-            console.log(`Task: ${task.title}`);
-            console.log(`- Now: ${Date.now()}`);
-            console.log(`- Deadline: ${task.deadline} (${new Date(Number(task.deadline)).toLocaleString()})`);
-            console.log(`- VotingDeadline: ${task.votingDeadline} (${new Date(Number(task.votingDeadline)).toLocaleString()})`);
-            console.log(`- isCompetition: ${task.isCompetition}`);
-            console.log(`- Phase condition: ${Date.now() > Number(task.deadline)} && ${Date.now() < Number(task.votingDeadline)}`);
 
             return (
               <div key={task.id} className={`glass-card flex flex-col justify-between group border border-white/5 hover:border-primary/20 transition-all ${!meetsReputation && !isAdmin ? "opacity-60 grayscale-[0.5]" : ""}`}>
@@ -486,7 +478,7 @@ export function TaskBoard({
                               </button>
                             )}
                             
-                            {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winner_claimed && (
+                            {task.isCompetition && Date.now() > Number(task.votingDeadline) && task.topSubmission && !task.winnerClaimed && (
                               <button
                                 onClick={() => onClaimWinner?.(task.id, task.topSubmission!)}
                                 className="px-4 py-2 bg-green-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 flex items-center gap-2"
